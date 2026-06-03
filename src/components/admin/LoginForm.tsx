@@ -78,9 +78,7 @@ setTimeout(() => {
   return (
     <Card className="w-full max-w-md">
       <h1 className="text-2xl font-bold">Admin Login</h1>
-      <p className="mt-2 text-sm text-slate-600">
-        Hanya akun yang ada di tabel app_admins yang bisa mengubah skills dan pengalaman.
-      </p>
+      
 
       <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
         <Input

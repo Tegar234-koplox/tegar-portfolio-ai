@@ -145,49 +145,80 @@ export function AdminDashboard() {
   }
 
   useEffect(() => {
-    async function checkSession() {
-      setStatus('checking');
-      setMessage('Memeriksa session admin...');
+  async function checkSession() {
+    setStatus('checking');
+    setMessage('Memeriksa session admin...');
 
-      const { data, error } = await supabase.auth.getSession();
+    const { data, error } = await supabase.auth.getSession();
 
-      if (error) {
-        setMessage(`Gagal membaca session: ${error.message}`);
-        setStatus('error');
-        return;
-      }
-
-      if (!data.session) {
-        setMessage('Session tidak ditemukan. Token login tidak terbaca di halaman admin.');
-        setStatus('error');
-        return;
-      }
-
-      const { data: adminData, error: adminError } = await supabase
-        .from('app_admins')
-        .select('user_id,email')
-        .eq('user_id', data.session.user.id)
-        .maybeSingle();
-
-      if (adminError) {
-        setMessage(`Session terbaca, tapi gagal cek admin: ${adminError.message}`);
-        setStatus('error');
-        return;
-      }
-
-      if (!adminData) {
-        setMessage('Session terbaca, tapi akun ini tidak ditemukan di app_admins.');
-        setStatus('error');
-        return;
-      }
-
-      setMessage('Session admin valid. Memuat data dashboard...');
-      await loadData();
+    if (error) {
+      setMessage(`Gagal membaca session: ${error.message}`);
+      setStatus('error');
+      return;
     }
 
-    checkSession();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supabase]);
+    if (!data.session) {
+      setProfile(null);
+      setSkills([]);
+      setExperiences([]);
+      setRecentViews([]);
+      setAnalyticsSummary(emptyAnalyticsSummary);
+
+      window.location.replace('/admin/login');
+      return;
+    }
+
+    const { data: adminData, error: adminError } = await supabase
+      .from('app_admins')
+      .select('user_id,email')
+      .eq('user_id', data.session.user.id)
+      .maybeSingle();
+
+    if (adminError) {
+      setMessage(`Session terbaca, tapi gagal cek admin: ${adminError.message}`);
+      setStatus('error');
+      return;
+    }
+
+    if (!adminData) {
+      setProfile(null);
+      setSkills([]);
+      setExperiences([]);
+      setRecentViews([]);
+      setAnalyticsSummary(emptyAnalyticsSummary);
+
+      window.location.replace('/admin/login');
+      return;
+    }
+
+    setMessage('Session admin valid. Memuat data dashboard...');
+    await loadData();
+  }
+
+  checkSession();
+
+  function handlePageShow(event: PageTransitionEvent) {
+    if (event.persisted) {
+      checkSession();
+    }
+  }
+
+  function handleVisibilityChange() {
+    if (document.visibilityState === 'visible') {
+      checkSession();
+    }
+  }
+
+  window.addEventListener('pageshow', handlePageShow);
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+
+  return () => {
+    window.removeEventListener('pageshow', handlePageShow);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+  };
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [supabase]);
 
   async function updateProfile(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -423,9 +454,23 @@ export function AdminDashboard() {
   }
 
   async function handleLogout() {
-    await supabase.auth.signOut();
-    window.location.href = '/admin/login';
+  setNotice(null);
+  setStatus('checking');
+  setMessage('Logout dari dashboard admin...');
+
+  const { error } = await supabase.auth.signOut();
+
+  localStorage.removeItem('tegar-portfolio-auth');
+  sessionStorage.clear();
+
+  if (error) {
+    setStatus('ready');
+    showError(error, 'Gagal logout.');
+    return;
   }
+
+  window.location.replace('/admin/login');
+}
 
   if (status === 'checking') {
     return (
