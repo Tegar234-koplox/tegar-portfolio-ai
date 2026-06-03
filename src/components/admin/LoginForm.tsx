@@ -67,7 +67,7 @@ export function LoginForm() {
       setStatus('Login berhasil. Mengalihkan ke dashboard admin...');
 
 setTimeout(() => {
-  window.location.replace('http://localhost:3000/admin');
+  window.location.replace('/admin');
 }, 500);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Login gagal.');
@@ -78,7 +78,7 @@ setTimeout(() => {
   return (
     <Card className="w-full max-w-md">
       <h1 className="text-2xl font-bold">Admin Login</h1>
-      
+  
 
       <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
         <Input
