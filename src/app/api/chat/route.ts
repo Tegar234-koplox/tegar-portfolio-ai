@@ -62,65 +62,37 @@ const responseSchema = {
 const PORTFOLIO_ASSISTANT_INSTRUCTIONS = `
 Kamu adalah AI Portfolio Assistant milik Tegar Sang Putra.
 
-Peran utama:
-- Menjawab pertanyaan pengunjung tentang profil, skill, layanan, proses kerja, project, tech stack, UI/UX, web development, mobile development, estimasi harga, dan pertanyaan umum.
-- Jawaban harus natural seperti asisten website portfolio profesional.
-- Gunakan bahasa Indonesia yang jelas, ringan, dan tidak kaku.
-- Jangan terlalu panjang kecuali user meminta detail.
-- Jangan mengarang pengalaman atau klaim berlebihan.
-- Jangan memaksa user langsung order. Bantu user memahami dulu.
+Tujuan utama:
+- Menjawab dengan gaya percakapan natural, mirip ChatGPT, tetapi tetap relevan dengan website portfolio Tegar.
+- Jika user bertanya umum, jawab pertanyaan umum itu secara normal.
+- Jika user bertanya teknologi, jelaskan sesuai konteks pertanyaannya. Jangan langsung memaksa ke estimasi harga.
+- Jika user membahas project, bantu terjemahkan kebutuhan user ke bahasa yang mudah dipahami.
+- Jika user masih awam, jelaskan sederhana dan hindari istilah teknis berlebihan.
+- Jika user bertanya harga atau meminta dibuatkan project, beri estimasi awal yang realistis.
 
 Profil Tegar:
 - Tegar adalah Web Developer, UI/UX Designer, dan Mobile App Developer.
-- Fokus layanan:
-  1. Website portfolio
-  2. Landing page
-  3. Company profile
-  4. Website bisnis
-  5. Web app / admin dashboard
-  6. Mobile app sederhana sampai menengah
-  7. UI/UX design
-  8. Redesign UI
-  9. Integrasi API
-  10. Database dan sistem CRUD
+- Layanan yang relevan: website portfolio, landing page, company profile, website bisnis, web app/admin dashboard, mobile app sederhana-menengah, UI/UX design, redesign UI, integrasi API, database, CRUD, dan deployment.
+- Tech stack yang boleh dijelaskan: HTML, CSS, JavaScript, React, Next.js, PHP, Laravel, Node.js, Python, Kotlin, React Native, MySQL, PostgreSQL, Figma, Git, Docker, hosting/deployment.
 
-Tech stack yang boleh dijelaskan:
-- Frontend: HTML, CSS, JavaScript, React, Next.js
-- Backend: PHP, Laravel, Node.js, Python
-- Mobile: Kotlin, React Native
-- Database: MySQL, PostgreSQL
-- Tools: Figma, Git, Docker, hosting/deployment
+Aturan percakapan:
+- Jawab sesuai pertanyaan terakhir dan riwayat percakapan.
+- Jangan mengarang fitur yang tidak diminta user.
+- Jangan menyimpulkan user butuh login, admin panel, database, payment, multi-role, AI, atau export PDF kecuali user menyebutnya langsung atau konteksnya jelas.
+- Jangan semua jawaban diarahkan ke order. Boleh menjelaskan konsep dulu.
+- Untuk pertanyaan umum, jawab umum. Setelah itu baru hubungkan ke project jika relevan.
+- Untuk pertanyaan teknologi, jelaskan pilihan dan alasan praktisnya.
+- Jika user bertanya tidak jelas, tanya maksimal 3 pertanyaan klarifikasi.
+- Jawaban ringkas-menengah. Panjang hanya jika user meminta detail.
 
-Aturan harga:
-- Jika user bertanya harga, beri estimasi awal yang masuk akal.
-- Jangan memberi angka ekstrem.
-- Jangan pernah memberi harga puluhan juta untuk tugas kuliah, website sederhana, portfolio, landing page, company profile sederhana, atau CRUD kecil.
-- Jika user menyebut mahasiswa, tugas kuliah, skripsi, tugas akhir, project kampus, atau aplikasi kuliah, harga maksimal Rp1.200.000.
-- Untuk mahasiswa:
-  - Website sederhana: Rp300.000 - Rp600.000
-  - Website CRUD sederhana: Rp600.000 - Rp900.000
-  - Mobile app sederhana: Rp700.000 - Rp1.200.000
-  - Web/mobile dengan login, database, CRUD, laporan sederhana: Rp900.000 - Rp1.200.000
-- Jika scope terlalu besar untuk budget mahasiswa, sarankan penyederhanaan fitur agar tetap masuk maksimal Rp1.200.000.
-- Jangan menyebut harga seperti Rp53.500.000.
-- Jika kebutuhan belum jelas, beri range aman dan tanyakan maksimal 3 pertanyaan penting.
-
-Aturan proses kerja:
-Jika user bertanya proses pengerjaan, jelaskan alur:
-1. Diskusi kebutuhan
-2. Analisis fitur
-3. Desain UI/UX
-4. Development
-5. Testing
-6. Revisi
-7. Deployment
-8. Maintenance opsional
-
-Aturan gaya:
-- Jawab langsung ke inti.
-- Gunakan poin jika membantu.
-- Hindari istilah teknis berlebihan.
-- Jika user awam, jelaskan dengan bahasa sederhana.
+Aturan harga mahasiswa:
+- Jika konteksnya mahasiswa, tugas kuliah, skripsi, tugas akhir, atau project kampus, gunakan harga khusus mahasiswa.
+- Range khusus mahasiswa: Rp400.000 - Rp1.200.000 sesuai kompleksitas.
+- Project mahasiswa sederhana: Rp400.000 - Rp700.000.
+- Project mahasiswa menengah: Rp700.000 - Rp950.000.
+- Project mahasiswa cukup kompleks: Rp950.000 - Rp1.200.000.
+- Jika scope terlalu besar, sarankan penyederhanaan fitur agar tetap masuk maksimal Rp1.200.000.
+- Jangan memberi estimasi puluhan juta untuk konteks mahasiswa/tugas kuliah.
 `;
 
 const PRICE_ANALYSIS_INSTRUCTIONS = `
@@ -147,6 +119,8 @@ type ChatRequestBody = {
   messages?: IncomingMessage[];
 };
 
+type ResponseSource = 'openai' | 'local';
+
 export async function POST(request: Request) {
   const ip = getClientIp(request);
   const limit = rateLimit({
@@ -163,10 +137,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as ChatRequestBody;
+    const rawBody = (await request.json()) as ChatRequestBody;
+    const body = normalizeRequestBody(rawBody);
 
     const latestMessage = getLatestUserMessage(body);
     const conversationText = buildConversationText(body);
+    const userOnlyConversationText = buildUserOnlyConversationText(body);
 
     if (!latestMessage || latestMessage.trim().length < 3) {
       return NextResponse.json(
@@ -183,45 +159,21 @@ export async function POST(request: Request) {
     }
 
     const client = createOpenAIClient();
-
-    const pricingIntent =
-      hasPricingIntent(latestMessage) ||
-      hasProjectBuildIntent(latestMessage) ||
-      isPricingContinuation(latestMessage, conversationText);
-
+    const pricingIntent = shouldUsePricingMode(
+      latestMessage,
+      userOnlyConversationText,
+    );
     const studentPricingContext = isStudentPricingContext(
       latestMessage,
-      conversationText,
+      userOnlyConversationText,
     );
 
-    /**
-     * Mode 1: Portfolio assistant.
-     * Dipakai untuk pertanyaan umum, tech stack, proses kerja, project,
-     * layanan, pengalaman, atau pertanyaan non-harga.
-     */
     if (!pricingIntent) {
-      let reply = createLocalPortfolioReply(latestMessage);
-      let responseSource: 'openai' | 'local' = 'local';
-
-      if (client) {
-        try {
-          const response = await client.responses.create({
-            model: process.env.OPENAI_MODEL ?? 'gpt-5.4-mini',
-            instructions: PORTFOLIO_ASSISTANT_INSTRUCTIONS,
-            input: conversationText,
-          });
-
-          if (response.output_text?.trim()) {
-            reply = response.output_text.trim();
-            responseSource = 'openai';
-          }
-        } catch (openAiError) {
-          console.warn(
-            'OpenAI unavailable. Using local assistant fallback.',
-            openAiError,
-          );
-        }
-      }
+      const { reply, source } = await createConversationalReply({
+        client,
+        latestMessage,
+        conversationText,
+      });
 
       await saveChatLog({
         request,
@@ -235,68 +187,28 @@ export async function POST(request: Request) {
         {
           reply,
           estimate: null,
-          source: responseSource,
+          source,
         },
         { headers: getRateLimitHeaders(limit) },
       );
     }
 
-    /**
-     * Mode 2: Pricing estimator.
-     * Tetap memakai sistem estimasi lama, tetapi sekarang diberi guard
-     * supaya tidak keluar harga absurd.
-     */
-    let analysis = createHeuristicAnalysis(conversationText);
-    let analysisSource: 'openai' | 'local' = 'local';
-
-    if (client) {
-      try {
-        const response = await client.responses.create({
-          model: process.env.OPENAI_MODEL ?? 'gpt-5.4-mini',
-          instructions: PRICE_ANALYSIS_INSTRUCTIONS,
-          input: conversationText,
-          text: {
-            format: {
-              type: 'json_schema',
-              name: 'project_estimate_analysis',
-              strict: true,
-              schema: responseSchema,
-            },
-          },
-        });
-
-        const parsedJson = JSON.parse(response.output_text);
-        const parsed = projectAnalysisSchema.safeParse(parsedJson);
-
-        if (parsed.success) {
-          analysis = parsed.data;
-          analysisSource = 'openai';
-        } else {
-          console.warn(
-            'OpenAI response schema invalid. Using local fallback.',
-            parsed.error,
-          );
-        }
-      } catch (openAiError) {
-        console.warn(
-          'OpenAI unavailable. Using local pricing fallback.',
-          openAiError,
-        );
-      }
-    }
+    const { analysis, source } = await createPricingAnalysis({
+      client,
+      userOnlyConversationText,
+    });
 
     const rawEstimate = calculateEstimate(analysis);
-
     const estimate = applyPricingGuards(
       rawEstimate,
       analysis,
       studentPricingContext,
     );
-
     const reply = formatPortfolioEstimateReply(
       estimate,
       analysis,
       studentPricingContext,
+      latestMessage,
     );
 
     await saveChatLog({
@@ -311,7 +223,7 @@ export async function POST(request: Request) {
       {
         reply,
         estimate,
-        source: analysisSource,
+        source,
       },
       { headers: getRateLimitHeaders(limit) },
     );
@@ -326,6 +238,32 @@ export async function POST(request: Request) {
       { status: 500, headers: getRateLimitHeaders(limit) },
     );
   }
+}
+
+function normalizeRequestBody(body: ChatRequestBody): ChatRequestBody {
+  const messages = body.messages
+    ?.filter((message) => {
+      if (message.role !== 'user' && message.role !== 'assistant') return false;
+      if (!message.content?.trim()) return false;
+
+      const content = message.content.trim();
+      const isOldInitialAssistantMessage =
+        message.role === 'assistant' &&
+        /jelaskan project yang ingin dibuat|saya akan bantu analisis kompleksitas|halo, saya asisten ai portfolio tegar/i.test(
+          content,
+        );
+
+      return !isOldInitialAssistantMessage;
+    })
+    .map((message) => ({
+      role: message.role,
+      content: message.content.trim(),
+    }));
+
+  return {
+    message: body.message?.trim(),
+    messages,
+  };
 }
 
 function getLatestUserMessage(body: ChatRequestBody) {
@@ -348,11 +286,23 @@ function buildConversationText(body: ChatRequestBody) {
           (message.role === 'user' || message.role === 'assistant') &&
           message.content?.trim(),
       )
-      .slice(-8)
+      .slice(-10)
       .map((message) => {
         const role = message.role === 'user' ? 'User' : 'Assistant';
         return `${role}: ${message.content.trim()}`;
       })
+      .join('\n');
+  }
+
+  return body.message?.trim() ?? '';
+}
+
+function buildUserOnlyConversationText(body: ChatRequestBody) {
+  if (body.messages?.length) {
+    return body.messages
+      .filter((message) => message.role === 'user' && message.content?.trim())
+      .slice(-10)
+      .map((message) => `User: ${message.content.trim()}`)
       .join('\n');
   }
 
@@ -366,19 +316,19 @@ function hasPricingIntent(text: string) {
     );
   }
 
-  return /harga|biaya|budget|estimasi harga|rate|tarif|juta|ribu|mahal|murah|nego|paket harga|berapa\s+(harga|biaya|budget|tarif|rate)|kena\s+berapa|habis\s+berapa|bayar\s+berapa/i.test(
+  return /harga|biaya|budget|estimasi harga|estimasi|rate|tarif|juta|ribu|mahal|murah|nego|paket harga|berapa\s+(harga|biaya|budget|tarif|rate)|kena\s+berapa|habis\s+berapa|bayar\s+berapa/i.test(
     text,
   );
 }
 
 function hasProjectBuildIntent(text: string) {
-  return /(mau|ingin|pengen|butuh|order|pesan|buatkan|bikinkan|pembuatan|membuat|bikin).*(website|web|aplikasi|mobile app|landing page|company profile|portfolio|dashboard|admin|chatbot|ui|ux|desain)/i.test(
+  return /(mau|ingin|pengen|butuh|order|pesan|buatkan|bikinkan|pembuatan|membuat|bikin|buat)\b[\s\S]{0,120}\b(website|web|aplikasi|mobile app|landing page|company profile|portfolio|portofolio|dashboard|admin|chatbot|ui\/ux|ui|ux|desain|sistem|project|proyek)/i.test(
     text,
   );
 }
 
 function hasStudentTerms(text: string) {
-  return /mahasiswa|tugas kuliah|skripsi|tugas akhir|project kampus|proyek kampus|aplikasi kuliah|website kuliah|mobile app kuliah/i.test(
+  return /mahasiswa|tugas kuliah|skripsi|tugas akhir|project kampus|proyek kampus|aplikasi kuliah|website kuliah|mobile app kuliah|kampus|dosen/i.test(
     text,
   );
 }
@@ -395,27 +345,54 @@ function isNewProjectSignal(text: string) {
   );
 }
 
+function isTechnologyQuestion(text: string) {
+  return /tech stack|stack|framework|bahasa pemrograman|tools|library|teknologi apa|pakai teknologi apa|teknologi yang cocok|lebih baik pakai|awam.*teknologi|teknologi.*awam|belum paham.*teknologi|apa itu/i.test(
+    text,
+  );
+}
+
 function isContinuationMessage(text: string) {
-  return /kalau ditambah|kalau cuma|fiturnya|yang tadi|aplikasi itu|website itu|project itu|proyek itu|berarti|jadi kalau|terus kalau|misalnya ditambah|ditambah|dikurangi|ubah fiturnya|fitur tambahannya/i.test(
+  return /kalau|kalo|jika|apabila|misal|misalnya|terus|lanjut|ditambah|tambah|dikurangi|ubah|pakai|menggunakan|dengan|fiturnya|yang tadi|aplikasi itu|website itu|project itu|proyek itu|berarti|jadi/i.test(
+    text,
+  );
+}
+
+function hasFeatureAdditionIntent(text: string) {
+  return /export|pdf|excel|laporan|login|admin|database|crud|dashboard|payment|pembayaran|notifikasi|upload|api|integrasi|halaman|screen|fitur|role|user|data/i.test(
     text,
   );
 }
 
 function isPricingContinuation(latestMessage: string, conversationText: string) {
   return (
-    isContinuationMessage(latestMessage) &&
-    (hasPricingIntent(conversationText) || hasStudentTerms(conversationText))
+    (isContinuationMessage(latestMessage) ||
+      hasFeatureAdditionIntent(latestMessage)) &&
+    (hasPricingIntent(conversationText) ||
+      hasStudentTerms(conversationText) ||
+      hasProjectBuildIntent(conversationText))
   );
+}
+
+function shouldUsePricingMode(latestMessage: string, userOnlyConversationText: string) {
+  if (hasPricingIntent(latestMessage)) return true;
+
+  if (isPricingContinuation(latestMessage, userOnlyConversationText)) return true;
+
+  if (hasProjectBuildIntent(latestMessage)) {
+    if (isTechnologyQuestion(latestMessage) && !hasStudentTerms(latestMessage)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  return false;
 }
 
 function isStudentPricingContext(
   latestMessage: string,
-  conversationText: string,
+  userOnlyConversationText: string,
 ) {
-  /**
-   * Kalau pesan terbaru jelas membahas project non-mahasiswa,
-   * jangan pakai harga mahasiswa meskipun history sebelumnya ada kata mahasiswa.
-   */
   if (
     hasNonStudentProjectTerms(latestMessage) &&
     isNewProjectSignal(latestMessage)
@@ -423,23 +400,103 @@ function isStudentPricingContext(
     return false;
   }
 
-  /**
-   * Kalau pesan terbaru menyebut mahasiswa/tugas kuliah,
-   * aktifkan harga mahasiswa.
-   */
   if (hasStudentTerms(latestMessage)) {
     return true;
   }
 
-  /**
-   * Kalau pesan terbaru adalah lanjutan dari pembahasan sebelumnya,
-   * dan history sebelumnya membahas mahasiswa, konteks mahasiswa tetap dipakai.
-   */
-  if (isContinuationMessage(latestMessage) && hasStudentTerms(conversationText)) {
+  if (
+    (isContinuationMessage(latestMessage) ||
+      hasFeatureAdditionIntent(latestMessage)) &&
+    hasStudentTerms(userOnlyConversationText)
+  ) {
     return true;
   }
 
   return false;
+}
+
+async function createConversationalReply({
+  client,
+  latestMessage,
+  conversationText,
+}: {
+  client: ReturnType<typeof createOpenAIClient>;
+  latestMessage: string;
+  conversationText: string;
+}): Promise<{ reply: string; source: ResponseSource }> {
+  let reply = createLocalPortfolioReply(latestMessage);
+  let source: ResponseSource = 'local';
+
+  if (client) {
+    try {
+      const response = await client.responses.create({
+        model: process.env.OPENAI_MODEL ?? 'gpt-5.4-mini',
+        instructions: PORTFOLIO_ASSISTANT_INSTRUCTIONS,
+        input: conversationText,
+      });
+
+      if (response.output_text?.trim()) {
+        reply = response.output_text.trim();
+        source = 'openai';
+      }
+    } catch (openAiError) {
+      console.warn(
+        'OpenAI unavailable. Using local assistant fallback.',
+        openAiError,
+      );
+    }
+  }
+
+  return { reply, source };
+}
+
+async function createPricingAnalysis({
+  client,
+  userOnlyConversationText,
+}: {
+  client: ReturnType<typeof createOpenAIClient>;
+  userOnlyConversationText: string;
+}) {
+  let analysis = createHeuristicAnalysis(userOnlyConversationText);
+  let source: ResponseSource = 'local';
+
+  if (client) {
+    try {
+      const response = await client.responses.create({
+        model: process.env.OPENAI_MODEL ?? 'gpt-5.4-mini',
+        instructions: PRICE_ANALYSIS_INSTRUCTIONS,
+        input: userOnlyConversationText,
+        text: {
+          format: {
+            type: 'json_schema',
+            name: 'project_estimate_analysis',
+            strict: true,
+            schema: responseSchema,
+          },
+        },
+      });
+
+      const parsedJson = JSON.parse(response.output_text);
+      const parsed = projectAnalysisSchema.safeParse(parsedJson);
+
+      if (parsed.success) {
+        analysis = parsed.data;
+        source = 'openai';
+      } else {
+        console.warn(
+          'OpenAI response schema invalid. Using local fallback.',
+          parsed.error,
+        );
+      }
+    } catch (openAiError) {
+      console.warn(
+        'OpenAI unavailable. Using local pricing fallback.',
+        openAiError,
+      );
+    }
+  }
+
+  return { analysis, source };
 }
 
 function applyPricingGuards(
@@ -488,34 +545,27 @@ function applyPricingGuards(
 }
 
 function getStudentPriceRange(analysis: any) {
-  const projectType = analysis.project_type;
   const complexity = analysis.complexity;
+  const projectType = analysis.project_type;
+  const featureKeys = Array.isArray(analysis.detected_feature_keys)
+    ? analysis.detected_feature_keys
+    : [];
 
-  if (projectType === 'mobile_app') {
-    if (complexity === 'simple') {
-      return { min: 700_000, max: 1_000_000 };
-    }
+  const hasCoreSystemFeatures = featureKeys.some((key: string) =>
+    ['authentication', 'database', 'admin_panel', 'report_export'].includes(key),
+  );
 
-    return { min: 900_000, max: 1_200_000 };
+  if (complexity === 'simple' && !hasCoreSystemFeatures) {
+    if (projectType === 'mobile_app') return { min: 700_000, max: 950_000 };
+    return { min: 400_000, max: 700_000 };
   }
 
-  if (projectType === 'web_app') {
-    if (complexity === 'simple') {
-      return { min: 600_000, max: 900_000 };
-    }
-
-    return { min: 900_000, max: 1_200_000 };
+  if (complexity === 'medium' || hasCoreSystemFeatures) {
+    if (featureKeys.length >= 4) return { min: 950_000, max: 1_200_000 };
+    return { min: 700_000, max: 950_000 };
   }
 
-  if (complexity === 'simple') {
-    return { min: 300_000, max: 600_000 };
-  }
-
-  if (complexity === 'medium') {
-    return { min: 600_000, max: 900_000 };
-  }
-
-  return { min: 900_000, max: 1_200_000 };
+  return { min: 950_000, max: 1_200_000 };
 }
 
 function getGeneralPriceCap(analysis: any) {
@@ -559,36 +609,30 @@ function formatPortfolioEstimateReply(
   estimate: any,
   analysis: any,
   studentPricingContext: boolean,
+  latestMessage: string,
 ) {
-  const studentProject = studentPricingContext;
   const projectTypeLabel = getProjectTypeLabel(analysis.project_type);
   const complexityLabel = getComplexityLabel(analysis.complexity);
-
   const features =
     Array.isArray(analysis.features) && analysis.features.length > 0
       ? analysis.features.slice(0, 5)
       : [];
-
-  const questions =
-    Array.isArray(analysis.questions) && analysis.questions.length > 0
-      ? analysis.questions.slice(0, 3)
-      : [];
-
+  const questions = getContextualQuestions(analysis, latestMessage).slice(0, 3);
   const lines: string[] = [];
 
   lines.push(
     `Dari kebutuhan yang kamu jelaskan, ini masuk kategori ${projectTypeLabel} dengan kompleksitas ${complexityLabel}.`,
   );
 
-  if (studentProject) {
+  if (studentPricingContext) {
     lines.push(
-      `Karena ini konteksnya mahasiswa/tugas kuliah, estimasi saya batasi di range khusus mahasiswa: ${formatRupiah(
+      `Karena konteksnya mahasiswa/tugas kuliah, estimasi awalnya saya batasi di range khusus mahasiswa: ${formatRupiah(
         estimate.price_min,
       )} - ${formatRupiah(estimate.price_max)}.`,
     );
 
     lines.push(
-      'Batas maksimalnya Rp1.200.000. Kalau fiturnya mulai terlalu banyak, lebih aman scope-nya disederhanakan supaya tetap masuk budget mahasiswa.',
+      'Patokan maksimalnya Rp1.200.000. Kalau fiturnya melebar, scope perlu dirapikan supaya tetap masuk budget mahasiswa.',
     );
   } else {
     lines.push(
@@ -600,15 +644,25 @@ function formatPortfolioEstimateReply(
 
   if (features.length > 0) {
     lines.push(`Fitur yang saya tangkap: ${features.join(', ')}.`);
+  } else {
+    lines.push(
+      'Fitur yang saya tangkap masih umum, jadi estimasinya masih perlu dikunci dari detail halaman dan alur fitur.',
+    );
+  }
+
+  if (/export|pdf/i.test(latestMessage)) {
+    lines.push(
+      'Untuk export PDF, scope-nya masih masuk akal selama format laporan dan sumber datanya jelas. Kalau hanya download laporan sederhana, biayanya tidak perlu melonjak jauh.',
+    );
   }
 
   lines.push(
-    'Harga final tetap tergantung detail fitur, jumlah halaman/screen, deadline, revisi, dan kebutuhan deployment.',
+    'Harga final tetap bergantung pada jumlah halaman/screen, deadline, revisi, kebutuhan database, deployment, dan detail alur user.',
   );
 
   if (questions.length > 0) {
     lines.push('Supaya estimasinya lebih presisi, perlu dikonfirmasi:');
-    questions.forEach((question: string, index: number) => {
+    questions.forEach((question, index) => {
       lines.push(`${index + 1}. ${question}`);
     });
   }
@@ -616,28 +670,77 @@ function formatPortfolioEstimateReply(
   return lines.join('\n\n');
 }
 
+function getContextualQuestions(analysis: any, latestMessage: string) {
+  const questions: string[] = [];
+  const projectType = analysis.project_type;
+
+  if (projectType === 'mobile_app') {
+    questions.push('Aplikasinya hanya Android, atau perlu Android dan iOS?');
+  } else {
+    questions.push('Berapa jumlah halaman atau screen yang dibutuhkan?');
+  }
+
+  if (!/login|admin|dashboard/i.test(latestMessage)) {
+    questions.push('Perlu login/admin panel, atau cukup tampilan biasa?');
+  }
+
+  if (/export|pdf|laporan/i.test(latestMessage)) {
+    questions.push('PDF-nya berisi data apa dan datanya diambil dari mana?');
+  } else {
+    questions.push('Apakah perlu database, CRUD data, atau laporan?');
+  }
+
+  questions.push('Deadline pengerjaannya kapan?');
+
+  return questions;
+}
+
 function createLocalPortfolioReply(message: string) {
-  if (/proses|alur|pengerjaan|workflow/i.test(message)) {
+  if (/halo|hai|hello|hi|pagi|siang|sore|malam/i.test(message)) {
+    return 'Halo. Saya bisa bantu jawab pertanyaan tentang layanan Tegar, teknologi, UI/UX, website, mobile app, atau estimasi project. Ceritakan saja kebutuhan atau pertanyaanmu.';
+  }
+
+  if (/awam|pemula|gaptek|belum paham|tidak paham|kurang paham|baru belajar/i.test(message)) {
     return [
-      'Alur pengerjaan biasanya dimulai dari diskusi kebutuhan, lalu analisis fitur, desain UI/UX, development, testing, revisi, deployment, dan maintenance jika dibutuhkan.',
+      'Tidak masalah kalau masih awam. Penjelasan sederhananya begini:',
       '',
-      'Untuk project kecil seperti portfolio atau landing page, prosesnya lebih sederhana. Untuk web app atau mobile app, perlu analisis fitur lebih detail supaya struktur database, role user, dan flow aplikasinya tidak berantakan.',
+      'Website atau aplikasi bisa dibayangkan seperti tempat kerja digital. Ada bagian tampilan yang dilihat pengguna, lalu ada sistem di belakangnya untuk menyimpan data, mengatur konten, atau menjalankan fitur tertentu.',
+      '',
+      'Kamu tidak perlu langsung paham istilah teknis. Cukup jelaskan:',
+      '1. Mau dibuat untuk apa?',
+      '2. Siapa yang akan memakai?',
+      '3. Fitur utamanya apa?',
+      '4. Perlu login, database, laporan, atau admin panel tidak?',
+      '',
+      'Dari jawaban itu, kebutuhan teknisnya bisa diterjemahkan pelan-pelan.',
     ].join('\n');
   }
 
-  if (/tech|stack|teknologi|framework|bahasa/i.test(message)) {
+  if (/proses|alur|pengerjaan|workflow/i.test(message)) {
     return [
-      'Tech stack yang bisa digunakan tergantung jenis project.',
+      'Alur pengerjaan biasanya dimulai dari diskusi kebutuhan, analisis fitur, desain UI/UX, development, testing, revisi, deployment, lalu maintenance jika dibutuhkan.',
       '',
-      'Untuk website modern bisa memakai React atau Next.js. Untuk backend bisa memakai Laravel, Node.js, atau Python. Untuk mobile app bisa memakai Kotlin atau React Native. Untuk database bisa memakai MySQL atau PostgreSQL.',
+      'Untuk project kecil seperti portfolio atau landing page, prosesnya lebih sederhana. Untuk web app atau mobile app, perlu analisis fitur lebih detail supaya database, role user, dan alur aplikasinya rapi.',
+    ].join('\n');
+  }
+
+  if (/tech stack|stack|framework|bahasa pemrograman|tools|teknologi apa|pakai teknologi apa|teknologi yang cocok|lebih baik pakai/i.test(message)) {
+    return [
+      'Pemilihan teknologi tergantung jenis project dan targetnya.',
       '',
-      'Pemilihan stack sebaiknya mengikuti kebutuhan project, bukan sekadar mengikuti teknologi yang sedang ramai.',
+      '- Website modern: React atau Next.js.',
+      '- Backend/API: Laravel, Node.js, atau Python.',
+      '- Mobile app: Kotlin untuk Android native, atau React Native untuk Android dan iOS.',
+      '- Database: MySQL atau PostgreSQL.',
+      '- Desain: Figma.',
+      '',
+      'Kalau project-nya sederhana atau tugas kuliah, jangan pilih stack yang terlalu berat. Lebih aman pakai teknologi yang mudah dikerjakan, mudah dijelaskan, dan sesuai deadline.',
     ].join('\n');
   }
 
   if (/ui|ux|desain|figma|redesign/i.test(message)) {
     return [
-      'Untuk UI/UX, fokusnya bukan hanya membuat tampilan bagus, tapi membuat alur sistem lebih mudah dipahami user.',
+      'Untuk UI/UX, fokusnya bukan hanya tampilan bagus, tapi membuat alur sistem mudah dipahami user.',
       '',
       'Prosesnya bisa dimulai dari analisis masalah, wireframe, mockup di Figma, prototype, lalu revisi berdasarkan kebutuhan pengguna.',
     ].join('\n');
@@ -656,9 +759,9 @@ function createLocalPortfolioReply(message: string) {
   }
 
   return [
-    'Saya bisa bantu menjelaskan layanan Tegar terkait pembuatan website, mobile app, UI/UX design, redesign tampilan, integrasi API, database, sampai estimasi harga project.',
+    'Saya paham. Bisa dijelaskan sedikit konteksnya?',
     '',
-    'Ceritakan kebutuhan project-nya, misalnya jenis aplikasi, fitur utama, target user, dan apakah ini untuk bisnis, portfolio, atau tugas kuliah.',
+    'Kalau ini tentang project, sebutkan jenis project dan fitur utamanya. Kalau ini pertanyaan umum atau teknologi, tanyakan langsung saja. Saya akan jawab sesuai konteks, bukan langsung memaksa ke estimasi harga.',
   ].join('\n');
 }
 
@@ -667,7 +770,7 @@ function getProjectTypeLabel(value: string) {
     landing_page: 'landing page',
     company_profile: 'company profile website',
     portfolio: 'portfolio website',
-    web_app: 'web app / admin dashboard',
+    web_app: 'web app / sistem berbasis web',
     mobile_app: 'mobile app',
     ai_chatbot: 'AI chatbot',
   };
@@ -679,7 +782,7 @@ function getComplexityLabel(value: string) {
   const labels: Record<string, string> = {
     simple: 'sederhana',
     medium: 'menengah',
-    complex: 'kompleks',
+    complex: 'cukup kompleks',
   };
 
   return labels[value] ?? 'belum jelas';
