@@ -118,8 +118,7 @@ Jika user bertanya proses pengerjaan, jelaskan alur:
 
 Aturan gaya:
 - Jawab langsung ke inti.
-- Gunakan format Markdown yang rapi.
-- Gunakan list angka atau bullet jika membantu.
+- Gunakan poin jika membantu.
 - Hindari istilah teknis berlebihan.
 - Jika user awam, jelaskan dengan bahasa sederhana.
 `;
