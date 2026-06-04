@@ -119,10 +119,7 @@ Jika user bertanya proses pengerjaan, jelaskan alur:
 Aturan gaya:
 - Jawab langsung ke inti.
 - Gunakan format Markdown yang rapi.
-- Gunakan heading kecil dengan format "### Judul" jika jawaban cukup panjang.
-- Gunakan **bold** untuk menekankan harga, jenis project, atau poin penting.
 - Gunakan list angka atau bullet jika membantu.
-- Pastikan heading Markdown selalu memakai spasi, contoh: "### Pertanyaan", bukan "###Pertanyaan".
 - Hindari istilah teknis berlebihan.
 - Jika user awam, jelaskan dengan bahasa sederhana.
 `;
