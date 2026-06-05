@@ -143,6 +143,7 @@ export async function POST(request: Request) {
     const latestMessage = getLatestUserMessage(body);
     const conversationText = buildConversationText(body);
     const userOnlyConversationText = buildUserOnlyConversationText(body);
+    
 
     if (!latestMessage || latestMessage.trim().length < 3) {
       return NextResponse.json(
@@ -157,7 +158,28 @@ export async function POST(request: Request) {
         { status: 400, headers: getRateLimitHeaders(limit) },
       );
     }
+function removeLatestUserMessage(
+  userOnlyConversationText: string,
+  latestMessage: string,
+) {
+  const lines = userOnlyConversationText
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
 
+  const latestLine = `User: ${latestMessage.trim()}`;
+
+  return lines.filter((line) => line !== latestLine).join('\n');
+}
+
+function hasStudentProjectServiceContext(text: string) {
+  return (
+    hasStudentTerms(text) &&
+    /(tugas|project|proyek|skripsi|tugas akhir|kampus|kuliah|dosen|website|web|aplikasi|mobile app|sistem)/i.test(
+      text,
+    )
+  );
+}
     const client = createOpenAIClient();
     const pricingIntent = shouldUsePricingMode(
       latestMessage,
@@ -322,7 +344,7 @@ function hasPricingIntent(text: string) {
 }
 
 function hasProjectBuildIntent(text: string) {
-  return /(mau|ingin|pengen|butuh|order|pesan|buatkan|bikinkan|pembuatan|membuat|bikin|buat)\b[\s\S]{0,120}\b(website|web|aplikasi|mobile app|landing page|company profile|portfolio|portofolio|dashboard|admin|chatbot|ui\/ux|ui|ux|desain|sistem|project|proyek)/i.test(
+  return /(mau|ingin|pengen|butuh|order|pesan|buatkan|bikinkan|pembuatan|membuat|bikin|buat|minta dibuatkan|butuh dibuatkan)\b[\s\S]{0,120}\b(website|web|aplikasi|mobile app|landing page|company profile|portfolio|portofolio|dashboard|admin|chatbot|ui\/ux|ui|ux|desain|sistem|project|proyek)/i.test(
     text,
   );
 }
@@ -362,28 +384,121 @@ function hasFeatureAdditionIntent(text: string) {
     text,
   );
 }
+function removeLatestUserMessage(
+  userOnlyConversationText: string,
+  latestMessage: string,
+) {
+  const lines = userOnlyConversationText
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
 
-function isPricingContinuation(latestMessage: string, conversationText: string) {
+  const latestLine = `User: ${latestMessage.trim()}`;
+
+  return lines.filter((line) => line !== latestLine).join('\n');
+}
+
+function hasStudentProjectServiceContext(text: string) {
   return (
-    (isContinuationMessage(latestMessage) ||
-      hasFeatureAdditionIntent(latestMessage)) &&
-    (hasPricingIntent(conversationText) ||
-      hasStudentTerms(conversationText) ||
-      hasProjectBuildIntent(conversationText))
+    hasStudentTerms(text) &&
+    /(tugas|project|proyek|skripsi|tugas akhir|kampus|kuliah|dosen|website|web|aplikasi|mobile app|sistem)/i.test(
+      text,
+    )
   );
 }
 
-function shouldUsePricingMode(latestMessage: string, userOnlyConversationText: string) {
-  if (hasPricingIntent(latestMessage)) return true;
+function isPricingContinuation(
+  latestMessage: string,
+  userOnlyConversationText: string,
+) {
+  const previousContext = removeLatestUserMessage(
+    userOnlyConversationText,
+    latestMessage,
+  );
 
-  if (isPricingContinuation(latestMessage, userOnlyConversationText)) return true;
+  const hasPreviousPricingOrProjectContext =
+    hasPricingIntent(previousContext) ||
+    hasStudentTerms(previousContext) ||
+    hasServiceOrPricingIntent(previousContext);
 
-  if (hasProjectBuildIntent(latestMessage)) {
-    if (isTechnologyQuestion(latestMessage) && !hasStudentTerms(latestMessage)) {
-      return false;
+  return (
+    (isContinuationMessage(latestMessage) ||
+      hasFeatureAdditionIntent(latestMessage)) &&
+    hasPreviousPricingOrProjectContext
+  );
+}
+
+function shouldUsePricingMode(
+  latestMessage: string,
+  userOnlyConversationText: string,
+) {
+  const learningIntent = hasLearningIntent(latestMessage);
+  const technologyQuestion = isTechnologyQuestion(latestMessage);
+  const explicitPricingIntent = hasPricingIntent(latestMessage);
+  const serviceOrPricingIntent = hasServiceOrPricingIntent(latestMessage);
+  const projectBuildIntent = hasProjectBuildIntent(latestMessage);
+  const studentProjectServiceContext =
+    hasStudentProjectServiceContext(latestMessage);
+
+  /**
+   * Guard utama:
+   * Jika user sedang belajar, masih awam, atau bertanya "mulai dari mana",
+   * jangan masuk estimator kecuali dia eksplisit bertanya harga/jasa/order.
+   */
+  if (
+    learningIntent &&
+    !explicitPricingIntent &&
+    !serviceOrPricingIntent &&
+    !studentProjectServiceContext
+  ) {
+    return false;
+  }
+
+  /**
+   * Pertanyaan teknologi umum tidak boleh masuk estimator.
+   * Contoh:
+   * "aku masih awam teknologi, mulai dari mana?"
+   * "kalau mau bikin website belajar apa dulu?"
+   */
+  if (
+    technologyQuestion &&
+    !explicitPricingIntent &&
+    !serviceOrPricingIntent &&
+    !studentProjectServiceContext
+  ) {
+    return false;
+  }
+
+  /**
+   * Kalau user jelas bertanya harga/biaya/budget/estimasi,
+   * langsung masuk estimator.
+   */
+  if (explicitPricingIntent) {
+    return true;
+  }
+
+  /**
+   * Follow-up hanya masuk estimator kalau sebelumnya memang sudah ada
+   * konteks harga/jasa/project mahasiswa.
+   */
+  if (isPricingContinuation(latestMessage, userOnlyConversationText)) {
+    return true;
+  }
+
+  /**
+   * "Mau bikin website" atau sejenisnya hanya masuk estimator kalau
+   * ada konteks service/pricing yang jelas.
+   */
+  if (projectBuildIntent) {
+    if (serviceOrPricingIntent) {
+      return true;
     }
 
-    return true;
+    if (studentProjectServiceContext) {
+      return true;
+    }
+
+    return false;
   }
 
   return false;
@@ -700,7 +815,7 @@ function createLocalPortfolioReply(message: string) {
     return 'Halo. Saya bisa bantu jawab pertanyaan tentang layanan Tegar, teknologi, UI/UX, website, mobile app, atau estimasi project. Ceritakan saja kebutuhan atau pertanyaanmu.';
   }
 
-  if (/awam|pemula|gaptek|belum paham|tidak paham|kurang paham|baru belajar/i.test(message)) {
+  if (/awam|pemula|gaptek|belum paham|tidak paham|kurang paham|baru belajar|gak ngerti|ga ngerti|engga ngerti|enggak ngerti|ngga ngerti|nggak ngerti|ga paham|gak paham|engga paham|enggak paham|ngga paham|nggak paham/i.test(message)) {
     return [
       'Tidak masalah kalau masih awam. Penjelasan sederhananya begini:',
       '',
@@ -763,6 +878,18 @@ function createLocalPortfolioReply(message: string) {
     '',
     'Kalau ini tentang project, sebutkan jenis project dan fitur utamanya. Kalau ini pertanyaan umum atau teknologi, tanyakan langsung saja. Saya akan jawab sesuai konteks, bukan langsung memaksa ke estimasi harga.',
   ].join('\n');
+}
+
+function hasLearningIntent(text: string) {
+  return /awam|pemula|baru belajar|belum paham|tidak paham|gaptek|mulai dari mana|belajar|roadmap|alur belajar|cara bikin|cara membuat|harus belajar apa|dari nol|step by step/i.test(
+    text,
+  );
+}
+
+function hasServiceOrPricingIntent(text: string) {
+  return /harga|estimasi|budget|biaya|tarif|jasa|order|pesan|buatkan|dibikinkan|minta dibuatkan|deadline|berapa kalau|berapa biaya|range harga|penawaran|quotation|invoice/i.test(
+    text,
+  );
 }
 
 function getProjectTypeLabel(value: string) {
