@@ -42,14 +42,24 @@ export function Chatbot() {
   ]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const chatEndRef = useRef<HTMLDivElement | null>(null);
+ const chatContainerRef = useRef<HTMLDivElement | null>(null);
+const hasMountedRef = useRef(false);
 
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'end',
-    });
-  }, [messages]);
+useEffect(() => {
+  if (!hasMountedRef.current) {
+    hasMountedRef.current = true;
+    return;
+  }
+
+  const chatContainer = chatContainerRef.current;
+
+  if (!chatContainer) return;
+
+  chatContainer.scrollTo({
+    top: chatContainer.scrollHeight,
+    behavior: 'smooth',
+  });
+}, [messages]);
 
   async function submitMessage(message: string) {
     const trimmedMessage = message.trim();
@@ -132,7 +142,9 @@ export function Chatbot() {
       </div>
 
       <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-4">
-        <div className="mb-4 max-h-[420px] space-y-4 overflow-y-auto pr-2">
+        <div ref={chatContainerRef}
+          className="mb-4 max-h-[420px] space-y-4 overflow-y-auto pr-2"
+        >
           {messages.map((message, index) => {
             const isUser = message.role === 'user';
 
@@ -216,8 +228,6 @@ export function Chatbot() {
               </div>
             );
           })}
-
-          <div ref={chatEndRef} />
         </div>
 
         <form
