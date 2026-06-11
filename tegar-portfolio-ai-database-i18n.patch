@@ -1,0 +1,313 @@
+diff --git a/README_DATABASE_I18N.md b/README_DATABASE_I18N.md
+new file mode 100644
+index 0000000..810bd04
+--- /dev/null
++++ b/README_DATABASE_I18N.md
+@@ -0,0 +1,50 @@
++# Database Content Translation
++
++Fitur translate website memakai dua jalur yang sengaja dipisahkan:
++
++1. **Static dictionary** di `src/lib/i18n/dictionary.ts` untuk teks UI statis seperti navbar, tombol, heading section, form, dan sapaan chatbot.
++2. **Database bilingual fields** untuk konten yang berasal dari Supabase seperti profile, skills, dan experiences.
++
++Dengan pemisahan ini, perubahan konten database tidak mengganggu dictionary statis.
++
++## Kolom bilingual yang dipakai
++
++### `profiles`
++
++- `headline` → Indonesia
++- `headline_en` → English
++- `about` → Indonesia
++- `about_en` → English
++
++### `skills`
++
++- `name` → Indonesia/default
++- `name_en` → English
++- `category` → Indonesia/default
++- `category_en` → English
++
++### `experiences`
++
++- `title` → Indonesia/default
++- `title_en` → English
++- `type` → Indonesia/default
++- `type_en` → English
++- `description` → Indonesia/default
++- `description_en` → English
++
++## Cara update database Supabase yang sudah ada
++
++Buka **Supabase Dashboard → SQL Editor**, lalu jalankan:
++
++```sql
++-- Copy isi file ini:
++-- supabase/migrations/20260611_database_i18n.sql
++```
++
++Setelah SQL dijalankan, buka admin dashboard dan isi field English yang masih kosong.
++
++## Fallback behavior
++
++Frontend memakai helper `getLocalizedText()`.
++
++Jika mode English aktif tapi field `_en` kosong, website otomatis memakai field default Indonesia. Jadi website tidak akan blank.
+diff --git a/src/app/layout.tsx b/src/app/layout.tsx
+index fbe08ce..af60884 100644
+--- a/src/app/layout.tsx
++++ b/src/app/layout.tsx
+@@ -1,8 +1,7 @@
+ import type { Metadata } from 'next';
+ import { Inter } from 'next/font/google';
+ import './globals.css';
+-import { AnalyticsTracker } from '@/components/analytics/AnalyticsTracker';
+-import { LanguageProvider } from '@/lib/i18n/LanguageProvider';
++import { Providers } from './providers';
+ 
+ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+ 
+@@ -27,10 +26,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
+     <html lang="id" suppressHydrationWarning>
+       <body className={`${inter.variable} font-sans antialiased`}>
+         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+-        <LanguageProvider>
+-          <AnalyticsTracker />
+-          {children}
+-        </LanguageProvider>
++        <Providers>{children}</Providers>
+       </body>
+     </html>
+   );
+diff --git a/src/app/providers.tsx b/src/app/providers.tsx
+new file mode 100644
+index 0000000..23d56a1
+--- /dev/null
++++ b/src/app/providers.tsx
+@@ -0,0 +1,18 @@
++'use client';
++
++import type { ReactNode } from 'react';
++import { AnalyticsTracker } from '@/components/analytics/AnalyticsTracker';
++import { LanguageProvider } from '@/lib/i18n/LanguageProvider';
++
++type ProvidersProps = {
++  children: ReactNode;
++};
++
++export function Providers({ children }: ProvidersProps) {
++  return (
++    <LanguageProvider>
++      <AnalyticsTracker />
++      {children}
++    </LanguageProvider>
++  );
++}
+diff --git a/src/components/admin/AdminDashboard.tsx b/src/components/admin/AdminDashboard.tsx
+index 315ecc5..8793baa 100644
+--- a/src/components/admin/AdminDashboard.tsx
++++ b/src/components/admin/AdminDashboard.tsx
+@@ -318,6 +318,7 @@ export function AdminDashboard() {
+ 
+     const payload = {
+       name: String(formData.get('name')).trim(),
++      name_en: String(formData.get('name_en') || '').trim() || null,
+       category: String(formData.get('category')).trim(),
+       category_en: String(formData.get('category_en') || '').trim() || null,
+       level: Number(formData.get('level')),
+@@ -343,6 +344,7 @@ export function AdminDashboard() {
+       .from('skills')
+       .update({
+         name: skill.name,
++        name_en: skill.name_en || null,
+         category: skill.category,
+         category_en: skill.category_en || null,
+         level: skill.level,
+@@ -640,7 +642,8 @@ export function AdminDashboard() {
+           <h2 className="text-xl font-bold">Tambah Skill</h2>
+ 
+           <form className="mt-5 space-y-3" onSubmit={addSkill}>
+-            <Input name="name" placeholder="Nama skill" required />
++            <Input name="name" placeholder="Nama skill Indonesia" required />
++            <Input name="name_en" placeholder="Skill name English (opsional, contoh: Stock Management)" />
+             <Input name="category" placeholder="Kategori Indonesia, contoh: Frontend" required />
+             <Input name="category_en" placeholder="Kategori English, contoh: Frontend" />
+             <Input name="level" type="number" min="1" max="100" placeholder="Level 1-100" required />
+@@ -686,6 +689,7 @@ export function AdminDashboard() {
+                 <div className="grid gap-3 md:grid-cols-2">
+                   <Input
+                     value={skill.name}
++                    placeholder="Nama skill Indonesia"
+                     onChange={(event) =>
+                       setSkills((items) =>
+                         items.map((item) =>
+@@ -694,6 +698,19 @@ export function AdminDashboard() {
+                       )
+                     }
+                   />
++                  <Input
++                    value={skill.name_en ?? ''}
++                    placeholder="Skill name English"
++                    onChange={(event) =>
++                      setSkills((items) =>
++                        items.map((item) =>
++                          item.id === skill.id
++                            ? { ...item, name_en: event.target.value }
++                            : item,
++                        ),
++                      )
++                    }
++                  />
+                   <Input
+                     value={skill.category}
+                     onChange={(event) =>
+diff --git a/src/components/sections/SkillsSection.tsx b/src/components/sections/SkillsSection.tsx
+index 8d9c6fc..66944df 100644
+--- a/src/components/sections/SkillsSection.tsx
++++ b/src/components/sections/SkillsSection.tsx
+@@ -31,11 +31,14 @@ export function SkillsSection({ skills }: { skills: Skill[] }) {
+             <Card key={category}>
+               <h3 className="text-lg font-bold text-slate-950 dark:text-white">{category}</h3>
+               <div className="mt-5 space-y-5">
+-                {items.map((skill) => (
++                {items.map((skill) => {
++                  const skillName = getLocalizedText(skill, 'name', language);
++
++                  return (
+                   <div key={skill.id}>
+                     <div className="mb-2 flex items-center justify-between text-sm">
+                       <span className="font-semibold text-slate-800 dark:text-slate-200">
+-                        {skill.name}
++                        {skillName}
+                       </span>
+                       <span className="text-slate-500 dark:text-slate-400">{skill.level}%</span>
+                     </div>
+@@ -46,7 +49,8 @@ export function SkillsSection({ skills }: { skills: Skill[] }) {
+                       />
+                     </div>
+                   </div>
+-                ))}
++                  );
++                })}
+               </div>
+             </Card>
+           ))}
+diff --git a/src/lib/data/fallback.ts b/src/lib/data/fallback.ts
+index b250891..ad0af79 100644
+--- a/src/lib/data/fallback.ts
++++ b/src/lib/data/fallback.ts
+@@ -14,14 +14,14 @@ export const fallbackPortfolioData: PortfolioData = {
+     cv_url: null,
+   },
+   skills: [
+-    { id: '1', name: 'HTML', category: 'Frontend', category_en: 'Frontend', level: 90, icon: null, sort_order: 1 },
+-    { id: '2', name: 'CSS', category: 'Frontend', category_en: 'Frontend', level: 88, icon: null, sort_order: 2 },
+-    { id: '3', name: 'JavaScript', category: 'Frontend', category_en: 'Frontend', level: 82, icon: null, sort_order: 3 },
+-    { id: '4', name: 'TypeScript', category: 'Frontend', category_en: 'Frontend', level: 75, icon: null, sort_order: 4 },
+-    { id: '5', name: 'React', category: 'Frontend', category_en: 'Frontend', level: 78, icon: null, sort_order: 5 },
+-    { id: '6', name: 'Next.js', category: 'Full Stack', category_en: 'Full Stack', level: 76, icon: null, sort_order: 6 },
+-    { id: '7', name: 'PHP', category: 'Backend', category_en: 'Backend', level: 78, icon: null, sort_order: 7 },
+-    { id: '8', name: 'Laravel', category: 'Backend', category_en: 'Backend', level: 74, icon: null, sort_order: 8 },
++    { id: '1', name: 'HTML', name_en: 'HTML', category: 'Frontend', category_en: 'Frontend', level: 90, icon: null, sort_order: 1 },
++    { id: '2', name: 'CSS', name_en: 'CSS', category: 'Frontend', category_en: 'Frontend', level: 88, icon: null, sort_order: 2 },
++    { id: '3', name: 'JavaScript', name_en: 'JavaScript', category: 'Frontend', category_en: 'Frontend', level: 82, icon: null, sort_order: 3 },
++    { id: '4', name: 'TypeScript', name_en: 'TypeScript', category: 'Frontend', category_en: 'Frontend', level: 75, icon: null, sort_order: 4 },
++    { id: '5', name: 'React', name_en: 'React', category: 'Frontend', category_en: 'Frontend', level: 78, icon: null, sort_order: 5 },
++    { id: '6', name: 'Next.js', name_en: 'Next.js', category: 'Full Stack', category_en: 'Full Stack', level: 76, icon: null, sort_order: 6 },
++    { id: '7', name: 'PHP', name_en: 'PHP', category: 'Backend', category_en: 'Backend', level: 78, icon: null, sort_order: 7 },
++    { id: '8', name: 'Laravel', name_en: 'Laravel', category: 'Backend', category_en: 'Backend', level: 74, icon: null, sort_order: 8 },
+   ],
+   experiences: [
+     {
+diff --git a/src/types/portfolio.ts b/src/types/portfolio.ts
+index 47fca28..95aa0a5 100644
+--- a/src/types/portfolio.ts
++++ b/src/types/portfolio.ts
+@@ -12,6 +12,7 @@ export type Profile = {
+ export type Skill = {
+   id: string;
+   name: string;
++  name_en?: string | null;
+   category: string;
+   category_en?: string | null;
+   level: number;
+diff --git a/supabase/migrations/20260611_database_i18n.sql b/supabase/migrations/20260611_database_i18n.sql
+new file mode 100644
+index 0000000..0a78a40
+--- /dev/null
++++ b/supabase/migrations/20260611_database_i18n.sql
+@@ -0,0 +1,48 @@
++-- Database bilingual fields for public portfolio content.
++-- Run this once in Supabase SQL Editor if the project database already exists.
++-- This migration does not affect the static dictionary translation in src/lib/i18n/dictionary.ts.
++
++alter table public.profiles add column if not exists headline_en text;
++alter table public.profiles add column if not exists about_en text;
++
++alter table public.skills add column if not exists name_en text;
++alter table public.skills add column if not exists category_en text;
++
++alter table public.experiences add column if not exists title_en text;
++alter table public.experiences add column if not exists type_en text;
++alter table public.experiences add column if not exists description_en text;
++
++update public.profiles
++set
++  headline_en = coalesce(headline_en, 'Full Stack Developer | UI/UX Enthusiast | Area Supervisor'),
++  about_en = coalesce(
++    about_en,
++    'I build websites, web-based applications, and clean responsive digital interfaces that focus on business needs. My focus is combining operational understanding, design, and engineering so the solutions are not only visually appealing but also useful.'
++  )
++where name = 'Tegar Sang Putra';
++
++update public.skills
++set
++  name_en = coalesce(name_en, name),
++  category_en = coalesce(category_en, category)
++where name_en is null or category_en is null;
++
++update public.experiences
++set
++  title_en = coalesce(title_en, 'Full Stack Web Developer'),
++  type_en = coalesce(type_en, 'Project'),
++  description_en = coalesce(
++    description_en,
++    'Built an inventory and cost control system for restaurant operations, covering stock management, inter-branch item transfers, transaction history, and an operational dashboard.'
++  )
++where title = 'Full Stack Web Developer';
++
++update public.experiences
++set
++  title_en = coalesce(title_en, 'Frontend Developer & UI/UX Designer'),
++  type_en = coalesce(type_en, 'Internship'),
++  description_en = coalesce(
++    description_en,
++    'Designed and implemented a company profile website using a clean, responsive, and user-friendly UI/UX approach.'
++  )
++where title = 'Frontend Developer & UI/UX Designer';
+diff --git a/supabase/schema.sql b/supabase/schema.sql
+index 99e2ccb..e1e06c1 100644
+--- a/supabase/schema.sql
++++ b/supabase/schema.sql
+@@ -284,6 +284,7 @@ end $$;
+ -- Bilingual content support for the public portfolio website.
+ alter table public.profiles add column if not exists headline_en text;
+ alter table public.profiles add column if not exists about_en text;
++alter table public.skills add column if not exists name_en text;
+ alter table public.skills add column if not exists category_en text;
+ alter table public.experiences add column if not exists title_en text;
+ alter table public.experiences add column if not exists type_en text;
+@@ -299,8 +300,10 @@ set
+ where name = 'Tegar Sang Putra';
+ 
+ update public.skills
+-set category_en = coalesce(category_en, category)
+-where category_en is null;
++set
++  name_en = coalesce(name_en, name),
++  category_en = coalesce(category_en, category)
++where name_en is null or category_en is null;
+ 
+ update public.experiences
+ set

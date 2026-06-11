@@ -37,20 +37,16 @@ const emptyAnalyticsSummary: AnalyticsSummary = {
 
 export function AdminDashboard() {
   const supabase = useMemo(() => createBrowserSupabaseClient(), []);
-
   const [status, setStatus] = useState<AdminStatus>('checking');
   const [message, setMessage] = useState<string | null>(null);
   const [notice, setNotice] = useState<AdminNotice | null>(null);
-
   const [profile, setProfile] = useState<Profile | null>(null);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [experiences, setExperiences] = useState<Experience[]>([]);
   const [recentViews, setRecentViews] = useState<PageView[]>([]);
-  const [analyticsSummary, setAnalyticsSummary] =
-    useState<AnalyticsSummary>(emptyAnalyticsSummary);
-
+  const [analyticsSummary, setAnalyticsSummary] = useState<AnalyticsSummary>(emptyAnalyticsSummary);
   const [isUploading, setIsUploading] = useState(false);
-
+  
   function showSuccess(message = 'Perubahan berhasil disimpan.') {
     setNotice({
       type: 'success',
@@ -232,11 +228,11 @@ export function AdminDashboard() {
 
     const formData = new FormData(event.currentTarget);
     const payload = {
-      name: String(formData.get('name')).trim(),
-      headline: String(formData.get('headline')).trim(),
-      about: String(formData.get('about')).trim(),
-      cv_url: String(formData.get('cv_url') || '').trim() || null,
-      updated_at: new Date().toISOString(),
+       name: String(formData.get('name')).trim(),
+       name_en: String(formData.get('name_en') || '').trim() || null,
+        category: String(formData.get('category')).trim(),
+        category_en: String(formData.get('category_en') || '').trim() || null,
+          level: Number(formData.get('level')),
     };
 
     const { error } = await supabase.from('profiles').update(payload).eq('id', profile.id);
@@ -317,6 +313,7 @@ export function AdminDashboard() {
     const payload = {
       name: String(formData.get('name')).trim(),
       category: String(formData.get('category')).trim(),
+      category_en: String(formData.get('category_en') || '').trim() || null,
       level: Number(formData.get('level')),
       sort_order: Number(formData.get('sort_order') || 0),
     };
@@ -341,6 +338,7 @@ export function AdminDashboard() {
       .update({
         name: skill.name,
         category: skill.category,
+        category_en: skill.category_en || null,
         level: skill.level,
         sort_order: skill.sort_order,
         updated_at: new Date().toISOString(),
@@ -384,11 +382,14 @@ export function AdminDashboard() {
 
     const payload = {
       title: String(formData.get('title')).trim(),
+      title_en: String(formData.get('title_en') || '').trim() || null,
       company: String(formData.get('company')).trim(),
       type: String(formData.get('type')).trim(),
+      type_en: String(formData.get('type_en') || '').trim() || null,
       start_date: String(formData.get('start_date')),
       end_date: String(formData.get('end_date') || '') || null,
       description: String(formData.get('description')).trim(),
+      description_en: String(formData.get('description_en') || '').trim() || null,
       tech_stack: String(formData.get('tech_stack'))
         .split(',')
         .map((item) => item.trim())
@@ -415,11 +416,14 @@ export function AdminDashboard() {
       .from('experiences')
       .update({
         title: experience.title,
+        title_en: experience.title_en || null,
         company: experience.company,
         type: experience.type,
+        type_en: experience.type_en || null,
         start_date: experience.start_date,
         end_date: experience.end_date,
         description: experience.description,
+        description_en: experience.description_en || null,
         tech_stack: experience.tech_stack,
         sort_order: experience.sort_order,
         updated_at: new Date().toISOString(),
@@ -572,10 +576,16 @@ export function AdminDashboard() {
                 <Input
                   name="headline"
                   defaultValue={profile.headline}
-                  placeholder="Headline"
+                  placeholder="Headline Indonesia"
                   required
                 />
-                <Textarea name="about" defaultValue={profile.about} placeholder="About" required />
+                <Input
+                  name="headline_en"
+                  defaultValue={profile.headline_en ?? ''}
+                  placeholder="Headline English"
+                />
+                <Textarea name="about" defaultValue={profile.about} placeholder="About Indonesia" required />
+                <Textarea name="about_en" defaultValue={profile.about_en ?? ''} placeholder="About English" />
                 <Input
                   name="cv_url"
                   defaultValue={profile.cv_url ?? ''}
@@ -625,7 +635,8 @@ export function AdminDashboard() {
 
           <form className="mt-5 space-y-3" onSubmit={addSkill}>
             <Input name="name" placeholder="Nama skill" required />
-            <Input name="category" placeholder="Kategori, contoh: Frontend" required />
+            <Input name="category" placeholder="Kategori Indonesia, contoh: Frontend" required />
+            <Input name="category_en" placeholder="Kategori English, contoh: Frontend" />
             <Input name="level" type="number" min="1" max="100" placeholder="Level 1-100" required />
             <Input name="sort_order" type="number" placeholder="Urutan" />
             <Button type="submit" className="w-full">
@@ -638,12 +649,15 @@ export function AdminDashboard() {
           <h2 className="text-xl font-bold">Tambah Pengalaman</h2>
 
           <form className="mt-5 space-y-3" onSubmit={addExperience}>
-            <Input name="title" placeholder="Judul" required />
+            <Input name="title" placeholder="Judul Indonesia" required />
+            <Input name="title_en" placeholder="Title English" />
             <Input name="company" placeholder="Perusahaan / Project" required />
-            <Input name="type" placeholder="Type, contoh: Work / Project / Internship" required />
+            <Input name="type" placeholder="Type Indonesia, contoh: Work / Project / Internship" required />
+            <Input name="type_en" placeholder="Type English, example: Work / Project / Internship" />
             <Input name="start_date" type="date" required />
             <Input name="end_date" type="date" />
-            <Textarea name="description" placeholder="Deskripsi" required />
+            <Textarea name="description" placeholder="Deskripsi Indonesia" required />
+            <Textarea name="description_en" placeholder="Description English" />
             <Input
               name="tech_stack"
               placeholder="Tech stack pisahkan koma, contoh: Next.js, Supabase"
@@ -680,6 +694,19 @@ export function AdminDashboard() {
                       setSkills((items) =>
                         items.map((item) =>
                           item.id === skill.id ? { ...item, category: event.target.value } : item,
+                        ),
+                      )
+                    }
+                  />
+                  <Input
+                    value={skill.category_en ?? ''}
+                    placeholder="Category English"
+                    onChange={(event) =>
+                      setSkills((items) =>
+                        items.map((item) =>
+                          item.id === skill.id
+                            ? { ...item, category_en: event.target.value }
+                            : item,
                         ),
                       )
                     }
@@ -754,6 +781,19 @@ export function AdminDashboard() {
                     }
                   />
                   <Input
+                    value={experience.title_en ?? ''}
+                    placeholder="Title English"
+                    onChange={(event) =>
+                      setExperiences((items) =>
+                        items.map((item) =>
+                          item.id === experience.id
+                            ? { ...item, title_en: event.target.value }
+                            : item,
+                        ),
+                      )
+                    }
+                  />
+                  <Input
                     value={experience.company}
                     onChange={(event) =>
                       setExperiences((items) =>
@@ -777,6 +817,19 @@ export function AdminDashboard() {
                       )
                     }
                   />
+                  <Input
+                    value={experience.type_en ?? ''}
+                    placeholder="Type English"
+                    onChange={(event) =>
+                      setExperiences((items) =>
+                        items.map((item) =>
+                          item.id === experience.id
+                            ? { ...item, type_en: event.target.value }
+                            : item,
+                        ),
+                      )
+                    }
+                  />
                   <Textarea
                     value={experience.description}
                     onChange={(event) =>
@@ -784,6 +837,19 @@ export function AdminDashboard() {
                         items.map((item) =>
                           item.id === experience.id
                             ? { ...item, description: event.target.value }
+                            : item,
+                        ),
+                      )
+                    }
+                  />
+                  <Textarea
+                    value={experience.description_en ?? ''}
+                    placeholder="Description English"
+                    onChange={(event) =>
+                      setExperiences((items) =>
+                        items.map((item) =>
+                          item.id === experience.id
+                            ? { ...item, description_en: event.target.value }
                             : item,
                         ),
                       )

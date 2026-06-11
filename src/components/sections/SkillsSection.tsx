@@ -1,10 +1,17 @@
+'use client';
+
 import { Card } from '@/components/ui/Card';
+import { getLocalizedText } from '@/lib/i18n/localize';
+import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import type { Skill } from '@/types/portfolio';
 
 export function SkillsSection({ skills }: { skills: Skill[] }) {
+  const { language, text } = useLanguage();
+
   const groupedSkills = skills.reduce<Record<string, Skill[]>>((groups, skill) => {
-    groups[skill.category] = groups[skill.category] ?? [];
-    groups[skill.category].push(skill);
+    const category = getLocalizedText(skill, 'category', language);
+    groups[category] = groups[category] ?? [];
+    groups[category].push(skill);
     return groups;
   }, {});
 
@@ -13,10 +20,10 @@ export function SkillsSection({ skills }: { skills: Skill[] }) {
       <div className="container-page">
         <div className="mb-8 max-w-2xl">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
-            Skills
+            {text.skills.eyebrow}
           </p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 dark:text-white md:text-4xl">
-            Skill teknis yang relevan untuk delivery project.
+            {text.skills.title}
           </h2>
         </div>
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">

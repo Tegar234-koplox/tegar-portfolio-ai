@@ -108,6 +108,7 @@ Gunakan detected_feature_keys hanya dari enum yang tersedia.
 `;
 
 type ChatRole = 'user' | 'assistant';
+type ChatLanguage = 'id' | 'en';
 
 type IncomingMessage = {
   role: ChatRole;
@@ -117,11 +118,13 @@ type IncomingMessage = {
 type ChatRequestBody = {
   message?: string;
   messages?: IncomingMessage[];
+  language?: ChatLanguage;
 };
 
 type ResponseSource = 'openai' | 'local';
 
 export async function POST(request: Request) {
+  const requestLanguage = getRequestLanguage(request);
   const ip = getClientIp(request);
   const limit = rateLimit({
     key: `chat:${ip}`,
@@ -131,13 +134,14 @@ export async function POST(request: Request) {
 
   if (!limit.allowed) {
     return NextResponse.json(
-      { error: 'Terlalu banyak request chatbot. Coba lagi sebentar.' },
+      { error: getChatErrorMessage('rateLimit', requestLanguage) },
       { status: 429, headers: getRateLimitHeaders(limit) },
     );
   }
 
   try {
     const rawBody = (await request.json()) as ChatRequestBody;
+    const preferredLanguage = normalizeLanguage(rawBody.language ?? requestLanguage);
     const body = normalizeRequestBody(rawBody);
 
     const latestMessage = getLatestUserMessage(body);
@@ -147,14 +151,14 @@ export async function POST(request: Request) {
 
     if (!latestMessage || latestMessage.trim().length < 3) {
       return NextResponse.json(
-        { error: 'Pesan terlalu pendek.' },
+        { error: getChatErrorMessage('messageTooShort', preferredLanguage) },
         { status: 400, headers: getRateLimitHeaders(limit) },
       );
     }
 
     if (latestMessage.length > 2_000) {
       return NextResponse.json(
-        { error: 'Pesan maksimal 2000 karakter.' },
+        { error: getChatErrorMessage('messageTooLong', preferredLanguage) },
         { status: 400, headers: getRateLimitHeaders(limit) },
       );
     }
@@ -195,6 +199,7 @@ function hasStudentProjectServiceContext(text: string) {
         client,
         latestMessage,
         conversationText,
+        language: preferredLanguage,
       });
 
       await saveChatLog({
@@ -231,6 +236,7 @@ function hasStudentProjectServiceContext(text: string) {
       analysis,
       studentPricingContext,
       latestMessage,
+      preferredLanguage,
     );
 
     await saveChatLog({
@@ -254,12 +260,55 @@ function hasStudentProjectServiceContext(text: string) {
 
     return NextResponse.json(
       {
-        error:
-          'Chatbot gagal memproses pesan karena request tidak valid atau server error.',
+        error: getChatErrorMessage('serverError', requestLanguage),
       },
       { status: 500, headers: getRateLimitHeaders(limit) },
     );
   }
+}
+
+function normalizeLanguage(value: unknown): ChatLanguage {
+  return value === 'en' ? 'en' : 'id';
+}
+
+function getRequestLanguage(request: Request): ChatLanguage {
+  const headerLanguage = request.headers.get('x-language');
+  if (headerLanguage === 'en' || headerLanguage === 'id') {
+    return headerLanguage;
+  }
+
+  const acceptLanguage = request.headers.get('accept-language')?.toLowerCase() ?? '';
+  return acceptLanguage.startsWith('en') ? 'en' : 'id';
+}
+
+function getAssistantLanguageInstruction(language: ChatLanguage) {
+  if (language === 'en') {
+    return 'Language rule: Reply in English. If the user writes in Indonesian, translate the intent and answer in natural English while keeping prices in Indonesian Rupiah.';
+  }
+
+  return 'Aturan bahasa: Jawab dalam bahasa Indonesia. Jika user menulis bahasa Inggris, pahami maksudnya dan jawab dalam bahasa Indonesia natural.';
+}
+
+function getChatErrorMessage(
+  key: 'rateLimit' | 'messageTooShort' | 'messageTooLong' | 'serverError',
+  language: ChatLanguage,
+) {
+  const messages: Record<ChatLanguage, Record<typeof key, string>> = {
+    id: {
+      rateLimit: 'Terlalu banyak request chatbot. Coba lagi sebentar.',
+      messageTooShort: 'Pesan terlalu pendek.',
+      messageTooLong: 'Pesan maksimal 2000 karakter.',
+      serverError: 'Chatbot gagal memproses pesan karena request tidak valid atau server error.',
+    },
+    en: {
+      rateLimit: 'Too many chatbot requests. Try again shortly.',
+      messageTooShort: 'The message is too short.',
+      messageTooLong: 'The message must be no more than 2000 characters.',
+      serverError: 'The chatbot failed to process the message due to an invalid request or server error.',
+    },
+  };
+
+  return messages[language][key];
 }
 
 function normalizeRequestBody(body: ChatRequestBody): ChatRequestBody {
@@ -271,7 +320,7 @@ function normalizeRequestBody(body: ChatRequestBody): ChatRequestBody {
       const content = message.content.trim();
       const isOldInitialAssistantMessage =
         message.role === 'assistant' &&
-        /jelaskan project yang ingin dibuat|saya akan bantu analisis kompleksitas|halo, saya asisten ai portfolio tegar/i.test(
+        /jelaskan project yang ingin dibuat|saya akan bantu analisis kompleksitas|halo, saya asisten ai portfolio tegar|hello, i am tegar's ai assistant/i.test(
           content,
         );
 
@@ -285,6 +334,7 @@ function normalizeRequestBody(body: ChatRequestBody): ChatRequestBody {
   return {
     message: body.message?.trim(),
     messages,
+    language: normalizeLanguage(body.language),
   };
 }
 
@@ -534,19 +584,21 @@ async function createConversationalReply({
   client,
   latestMessage,
   conversationText,
+  language,
 }: {
   client: ReturnType<typeof createOpenAIClient>;
   latestMessage: string;
   conversationText: string;
+  language: ChatLanguage;
 }): Promise<{ reply: string; source: ResponseSource }> {
-  let reply = createLocalPortfolioReply(latestMessage);
+  let reply = createLocalPortfolioReply(latestMessage, language);
   let source: ResponseSource = 'local';
 
   if (client) {
     try {
       const response = await client.responses.create({
         model: process.env.OPENAI_MODEL ?? 'gpt-5.4-mini',
-        instructions: PORTFOLIO_ASSISTANT_INSTRUCTIONS,
+        instructions: `${PORTFOLIO_ASSISTANT_INSTRUCTIONS}\n${getAssistantLanguageInstruction(language)}`,
         input: conversationText,
       });
 
@@ -725,15 +777,67 @@ function formatPortfolioEstimateReply(
   analysis: any,
   studentPricingContext: boolean,
   latestMessage: string,
+  language: ChatLanguage,
 ) {
-  const projectTypeLabel = getProjectTypeLabel(analysis.project_type);
-  const complexityLabel = getComplexityLabel(analysis.complexity);
+  const projectTypeLabel = getProjectTypeLabel(analysis.project_type, language);
+  const complexityLabel = getComplexityLabel(analysis.complexity, language);
   const features =
     Array.isArray(analysis.features) && analysis.features.length > 0
       ? analysis.features.slice(0, 5)
       : [];
-  const questions = getContextualQuestions(analysis, latestMessage).slice(0, 3);
+  const questions = getContextualQuestions(analysis, latestMessage, language).slice(0, 3);
   const lines: string[] = [];
+
+  if (language === 'en') {
+    lines.push(
+      `Based on your requirements, this is a ${projectTypeLabel} with ${complexityLabel} complexity.`,
+    );
+
+    if (studentPricingContext) {
+      lines.push(
+        `Because this is for a student/campus assignment context, the initial estimate is limited to the student pricing range: ${formatRupiah(
+          estimate.price_min,
+        )} - ${formatRupiah(estimate.price_max)}.`,
+      );
+
+      lines.push(
+        'The maximum reference price is Rp1,200,000. If the scope expands, the feature set should be simplified to stay within a student budget.',
+      );
+    } else {
+      lines.push(
+        `The initial estimate is around ${formatRupiah(estimate.price_min)} - ${formatRupiah(
+          estimate.price_max,
+        )}.`,
+      );
+    }
+
+    if (features.length > 0) {
+      lines.push(`Detected features: ${features.join(', ')}.`);
+    } else {
+      lines.push(
+        'The detected features are still general, so the estimate needs clearer page and feature-flow details.',
+      );
+    }
+
+    if (/export|pdf/i.test(latestMessage)) {
+      lines.push(
+        'For PDF export, the scope is still reasonable as long as the report format and data source are clear. A simple report download should not increase the cost drastically.',
+      );
+    }
+
+    lines.push(
+      'The final price still depends on the number of pages/screens, deadline, revisions, database needs, deployment, and user-flow details.',
+    );
+
+    if (questions.length > 0) {
+      lines.push('To make the estimate more accurate, please confirm:');
+      questions.forEach((question, index) => {
+        lines.push(`${index + 1}. ${question}`);
+      });
+    }
+
+    return lines.join('\n\n');
+  }
 
   lines.push(
     `Dari kebutuhan yang kamu jelaskan, ini masuk kategori ${projectTypeLabel} dengan kompleksitas ${complexityLabel}.`,
@@ -785,9 +889,34 @@ function formatPortfolioEstimateReply(
   return lines.join('\n\n');
 }
 
-function getContextualQuestions(analysis: any, latestMessage: string) {
+function getContextualQuestions(
+  analysis: any,
+  latestMessage: string,
+  language: ChatLanguage,
+) {
   const questions: string[] = [];
   const projectType = analysis.project_type;
+
+  if (language === 'en') {
+    if (projectType === 'mobile_app') {
+      questions.push('Is the app Android-only, or does it need both Android and iOS?');
+    } else {
+      questions.push('How many pages or screens are needed?');
+    }
+
+    if (!/login|admin|dashboard/i.test(latestMessage)) {
+      questions.push('Do you need login/admin panel features, or only a regular public interface?');
+    }
+
+    if (/export|pdf|laporan|report/i.test(latestMessage)) {
+      questions.push('What data should be included in the PDF and where does the data come from?');
+    } else {
+      questions.push('Do you need a database, CRUD data management, or reports?');
+    }
+
+    questions.push('What is the deadline?');
+    return questions;
+  }
 
   if (projectType === 'mobile_app') {
     questions.push('Aplikasinya hanya Android, atau perlu Android dan iOS?');
@@ -810,7 +939,77 @@ function getContextualQuestions(analysis: any, latestMessage: string) {
   return questions;
 }
 
-function createLocalPortfolioReply(message: string) {
+function createLocalPortfolioReply(message: string, language: ChatLanguage) {
+  if (language === 'en') {
+    if (/halo|hai|hello|hi|pagi|siang|sore|malam|morning|afternoon|evening/i.test(message)) {
+      return 'Hello. I can help answer questions about Tegar’s services, technology, UI/UX, websites, mobile apps, or project estimates. Describe your requirement or question.';
+    }
+
+    if (/awam|pemula|gaptek|belum paham|tidak paham|kurang paham|baru belajar|new to technology|beginner|do not understand|don't understand|learn|learning/i.test(message)) {
+      return [
+        'No problem if you are still new to technology. The simple explanation is this:',
+        '',
+        'A website or app is like a digital workspace. There is an interface users see, then a system behind it for storing data, managing content, or running certain features.',
+        '',
+        'You do not need to understand technical terms first. Just explain:',
+        '1. What is it for?',
+        '2. Who will use it?',
+        '3. What are the main features?',
+        '4. Do you need login, database, reports, or an admin panel?',
+        '',
+        'From those answers, the technical requirements can be translated step by step.',
+      ].join('\n');
+    }
+
+    if (/process|workflow|timeline|alur|proses|pengerjaan/i.test(message)) {
+      return [
+        'The usual workflow starts with requirement discussion, feature analysis, UI/UX design, development, testing, revisions, deployment, and maintenance if needed.',
+        '',
+        'Small projects such as portfolios or landing pages are simpler. Web apps and mobile apps need more detailed feature analysis so the database, user roles, and app flow are structured properly.',
+      ].join('\n');
+    }
+
+    if (/tech stack|stack|framework|programming language|tools|technology|teknologi apa|pakai teknologi apa|lebih baik pakai/i.test(message)) {
+      return [
+        'The right technology depends on the project type and target.',
+        '',
+        '- Modern website: React or Next.js.',
+        '- Backend/API: Laravel, Node.js, or Python.',
+        '- Mobile app: Kotlin for native Android, or React Native for Android and iOS.',
+        '- Database: MySQL or PostgreSQL.',
+        '- Design: Figma.',
+        '',
+        'For simple projects or campus assignments, avoid an overly heavy stack. Use technology that is easy to build, easy to explain, and realistic for the deadline.',
+      ].join('\n');
+    }
+
+    if (/ui|ux|design|figma|redesign|desain/i.test(message)) {
+      return [
+        'For UI/UX, the focus is not only making the interface look good, but making the system flow easy for users to understand.',
+        '',
+        'The process can start from problem analysis, wireframes, Figma mockups, prototypes, then revisions based on user needs.',
+      ].join('\n');
+    }
+
+    if (/how long|duration|timeline|berapa\s+(lama|hari|minggu|bulan)|durasi/i.test(message)) {
+      return [
+        'The timeline depends on the project type and number of features.',
+        '',
+        '- Simple portfolio or landing page: around 2–5 working days.',
+        '- Company profile: around 5–10 working days.',
+        '- Simple web app or mobile app: around 1–3 weeks.',
+        '',
+        'The final timeline depends on the number of pages/screens, login features, database, admin dashboard, revisions, and deployment needs.',
+      ].join('\n');
+    }
+
+    return [
+      'Understood. Please give me a little more context.',
+      '',
+      'If this is about a project, mention the project type and main features. If this is a general or technical question, ask directly. I will answer based on the context, not force everything into a price estimate.',
+    ].join('\n');
+  }
+
   if (/halo|hai|hello|hi|pagi|siang|sore|malam/i.test(message)) {
     return 'Halo. Saya bisa bantu jawab pertanyaan tentang layanan Tegar, teknologi, UI/UX, website, mobile app, atau estimasi project. Ceritakan saja kebutuhan atau pertanyaanmu.';
   }
@@ -892,27 +1091,44 @@ function hasServiceOrPricingIntent(text: string) {
   );
 }
 
-function getProjectTypeLabel(value: string) {
-  const labels: Record<string, string> = {
-    landing_page: 'landing page',
-    company_profile: 'company profile website',
-    portfolio: 'portfolio website',
-    web_app: 'web app / sistem berbasis web',
-    mobile_app: 'mobile app',
-    ai_chatbot: 'AI chatbot',
+function getProjectTypeLabel(value: string, language: ChatLanguage) {
+  const labels: Record<ChatLanguage, Record<string, string>> = {
+    id: {
+      landing_page: 'landing page',
+      company_profile: 'company profile website',
+      portfolio: 'portfolio website',
+      web_app: 'web app / sistem berbasis web',
+      mobile_app: 'mobile app',
+      ai_chatbot: 'AI chatbot',
+    },
+    en: {
+      landing_page: 'landing page',
+      company_profile: 'company profile website',
+      portfolio: 'portfolio website',
+      web_app: 'web app / web-based system',
+      mobile_app: 'mobile app',
+      ai_chatbot: 'AI chatbot',
+    },
   };
 
-  return labels[value] ?? 'project digital';
+  return labels[language][value] ?? (language === 'en' ? 'digital project' : 'project digital');
 }
 
-function getComplexityLabel(value: string) {
-  const labels: Record<string, string> = {
-    simple: 'sederhana',
-    medium: 'menengah',
-    complex: 'cukup kompleks',
+function getComplexityLabel(value: string, language: ChatLanguage) {
+  const labels: Record<ChatLanguage, Record<string, string>> = {
+    id: {
+      simple: 'sederhana',
+      medium: 'menengah',
+      complex: 'cukup kompleks',
+    },
+    en: {
+      simple: 'simple',
+      medium: 'medium',
+      complex: 'fairly complex',
+    },
   };
 
-  return labels[value] ?? 'belum jelas';
+  return labels[language][value] ?? (language === 'en' ? 'unclear' : 'belum jelas');
 }
 
 function formatRupiah(value: number) {

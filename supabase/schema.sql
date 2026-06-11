@@ -280,3 +280,44 @@ begin
       );
   end if;
 end $$;
+
+-- Bilingual content support for the public portfolio website.
+alter table public.profiles add column if not exists headline_en text;
+alter table public.profiles add column if not exists about_en text;
+alter table public.skills add column if not exists category_en text;
+alter table public.experiences add column if not exists title_en text;
+alter table public.experiences add column if not exists type_en text;
+alter table public.experiences add column if not exists description_en text;
+
+update public.profiles
+set
+  headline_en = coalesce(headline_en, 'Full Stack Developer | UI/UX Enthusiast | Area Supervisor'),
+  about_en = coalesce(
+    about_en,
+    'I build websites, web-based applications, and clean responsive digital interfaces that focus on business needs. My focus is combining operational understanding, design, and engineering so the solutions are not only visually appealing but also useful.'
+  )
+where name = 'Tegar Sang Putra';
+
+update public.skills
+set category_en = coalesce(category_en, category)
+where category_en is null;
+
+update public.experiences
+set
+  title_en = coalesce(title_en, 'Full Stack Web Developer'),
+  type_en = coalesce(type_en, 'Project'),
+  description_en = coalesce(
+    description_en,
+    'Built an inventory and cost control system for restaurant operations, covering stock management, inter-branch item transfers, transaction history, and an operational dashboard.'
+  )
+where title = 'Full Stack Web Developer';
+
+update public.experiences
+set
+  title_en = coalesce(title_en, 'Frontend Developer & UI/UX Designer'),
+  type_en = coalesce(type_en, 'Internship'),
+  description_en = coalesce(
+    description_en,
+    'Designed and implemented a company profile website using a clean, responsive, and user-friendly UI/UX approach.'
+  )
+where title = 'Frontend Developer & UI/UX Designer';
