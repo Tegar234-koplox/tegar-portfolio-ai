@@ -109,5 +109,6 @@ export const featuredProjects: FeaturedProject[] = [
       },
     ],
     pdfUrl: '/projects/stock-redesign/overview.pdf',
+    githubUrl: 'https://github.com/Tegar234-koplox/pwa-stok',
   },
 ];
