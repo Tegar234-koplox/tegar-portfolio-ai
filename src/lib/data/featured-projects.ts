@@ -155,7 +155,7 @@ export const featuredProjects: FeaturedProject[] = [
     screenshots: [
       {
         title: 'Finance and Payment',
-        imageUrl: '/projects/kos-management-system/Finance-and-Payment.jpeg',
+        imageUrl: '/projects/kos-management-system/Finance-and-payment.jpeg',
       },
       {
         title: 'Bedroom and Facility Management',
