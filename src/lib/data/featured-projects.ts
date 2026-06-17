@@ -59,6 +59,7 @@ export const featuredProjects: FeaturedProject[] = [
     pdfUrl: '/projects/ai-portfolio/overview.pdf',
     githubUrl: 'https://github.com/Tegar234-koplox/tegar-portfolio-ai',
   },
+  
   {
     id: 'stock-redesign',
     title: 'Stock Management UI Redesign',
@@ -110,5 +111,62 @@ export const featuredProjects: FeaturedProject[] = [
     ],
     pdfUrl: '/projects/stock-redesign/overview.pdf',
     githubUrl: 'https://github.com/Tegar234-koplox/pwa-stok',
+  },
+
+  {
+    id: 'kos-management-system',
+    title: 'Home Boarding Management System',
+    category: 'Mobile App',
+    year: '2026',
+    status: 'Completed',
+    role: 'Full Stack Developer',
+    shortDescription:
+      'Membangun aplikasi sistem manajemen penginapan untuk efektivitas dan efisiensi pengelolaan kos terkait penghuni, fasilitas, dan keuangan.',
+    shortDescription_en:
+      'Built a boarding house management system application to streamline and optimize the management of residents, facilities, and financial operations.',
+    problem:
+      'Pengelolaan penginapan yang mengharuskan pemilik kontrol manual menyebabkan berkurangnya efisiensi waktu dan cukup menguras energi, begitu juga peringatan penghuni yang memerlukan pesan manual melalui aplikasi perpesanan yang menghabiskan waktu.',
+    problem_en:
+      'Manual lodging management creates operational inefficiencies, as owners must spend considerable time and effort controlling daily activities. Resident reminders also become inefficient when they have to be sent individually through messaging applications.',
+    solution:
+      'Membangun aplikasi sistem manajemen penginapan lintas platform Android dan iOS untuk mempermudah pemilik dalam mengelola penginapan dan mempermudah penghuni dalam hal pembayaran dan laporan masalah fasilitas.',
+    solution_en:
+      'Built a cross-platform lodging management application for Android and iOS that simplifies property management for owners and helps residents manage payments and report facility issues.',
+    techStack: ['React Native + Typescript', 'Next.js + Typescript + Tailwind CSS', 'Node.js + Express', 'PostgreSQL (Prisma + Redis)', 'REST API (Swagger + Websocket)', 'Railway', 'Supabase', 'CI/CD', 'Midtrans', 'Expo Notification + Fonnte'],
+    features: [
+      'Manajemen Penghuni',
+      'Keuangan dan Pembayaran',
+      'Manajemen Kamar dan Fasilitas',
+      'Notifikasi dan Komunikasi',
+      'Laporan Kerusakan',
+      'Dashboard dan Laporan',
+      'Autentikasi dan Peran',
+    ],
+    features_en: [
+      'Resident Management',
+      'Finance and Payment',
+      'Bedroom and Facility Management',
+      'Notification and Communication',
+      'Damage Report',
+      'Dashboard and Report',
+      'Authentication and Role',
+    ],
+    coverImage: '/projects/kos-management-system/cover.jpeg',
+    screenshots: [
+      {
+        title: 'Finance and Payment',
+        imageUrl: '/projects/kos-management-system/Finance-and-Payment.jpeg',
+      },
+      {
+        title: 'Bedroom and Facility Management',
+        imageUrl: '/projects/kos-management-system/Bedroom and Facility Management.jpeg',
+      },
+      {
+        title: 'Damage Report',
+        imageUrl: '/projects/kos-management-system/damage-report.jpeg',
+      },
+    ],
+    pdfUrl: '/projects/kos-management-system/overview.pdf',
+    githubUrl: 'https://github.com/Tegar234-koplox/kos-management-system',
   },
 ];
