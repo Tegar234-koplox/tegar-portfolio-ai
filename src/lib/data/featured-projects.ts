@@ -167,7 +167,7 @@ export const featuredProjects: FeaturedProject[] = [
       },
       {
         title: 'Staff Dashboard',
-        imageUrl: '/projects/wedding-web/staff-dashboard.png ',
+        imageUrl: '/projects/wedding-web/staff-dashboard.png',
       },
     ],
     pdfUrl: ' ',
