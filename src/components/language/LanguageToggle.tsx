@@ -9,10 +9,10 @@ export function LanguageToggle() {
   return (
     <div
       aria-label={text.languageToggle.label}
-      className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/70 p-1 text-xs font-bold shadow-sm dark:border-slate-700 dark:bg-slate-900/70"
+      className="pixel-border inline-flex items-center gap-1 bg-[#8fd3f4] p-1 text-xs font-black text-[#17263a] dark:bg-[#28485f] dark:text-[#f6edcf]"
       role="group"
     >
-      <Languages className="ml-2 h-4 w-4 text-slate-500 dark:text-slate-400" />
+      <Languages className="ml-1 h-4 w-4" />
       {(['id', 'en'] as const).map((item) => {
         const isActive = language === item;
 
@@ -21,16 +21,16 @@ export function LanguageToggle() {
             key={item}
             type="button"
             className={[
-             'rounded-full px-2.5 py-1 transition',
+              'border-2 border-[#241b15] px-2.5 py-1 uppercase tracking-wide transition',
               isActive
-                ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
-                : 'text-slate-500 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white',
+                ? 'bg-[#4f9d3a] text-white shadow-[2px_2px_0_#241b15]'
+                : 'bg-[#c7ebff] text-[#17263a] hover:bg-[#a8ddf7] dark:bg-[#36596f] dark:text-[#f6edcf] dark:hover:bg-[#44708b]',
             ].join(' ')}
             onClick={() => setLanguage(item)}
           >
             {text.languageToggle[item]}
           </button>
-       );
+        );
       })}
     </div>
   );
