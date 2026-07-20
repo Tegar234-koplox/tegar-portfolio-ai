@@ -4,7 +4,7 @@
 
 :root {
   color-scheme: light;
-  background: #f8fafc;
+  background: #87ceeb;
 }
 
 html {
@@ -13,41 +13,70 @@ html {
 
 body {
   min-height: 100vh;
-  color: #0f172a;
+  color: #1f2937;
   background:
-    radial-gradient(circle at top left, rgba(59, 130, 246, 0.14), transparent 32rem),
-    radial-gradient(circle at top right, rgba(15, 23, 42, 0.08), transparent 28rem),
-    #f8fafc;
+    linear-gradient(rgba(255, 255, 255, 0.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.14) 1px, transparent 1px),
+    linear-gradient(to bottom, #87ceeb 0 18rem, #70b7dc 18rem 18.5rem, #5f9f3b 18.5rem 21rem, #795548 21rem 100%);
+  background-size: 32px 32px, 32px 32px, 100% 100%;
 }
 
 html.dark {
   color-scheme: dark;
-  background: #020617;
+  background: #07111f;
 }
 
 html.dark body {
-  color: #e2e8f0;
+  color: #e5e7eb;
   background:
-    radial-gradient(circle at top left, rgba(59, 130, 246, 0.16), transparent 32rem),
-    radial-gradient(circle at top right, rgba(148, 163, 184, 0.08), transparent 28rem),
-    #020617;
+    radial-gradient(circle at 15% 8%, rgba(255, 255, 255, 0.75) 0 1px, transparent 2px),
+    radial-gradient(circle at 78% 12%, rgba(255, 255, 255, 0.65) 0 1px, transparent 2px),
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, #07111f 0 18rem, #12243a 18rem 18.5rem, #315f2c 18.5rem 21rem, #33251f 21rem 100%);
+  background-size: 180px 180px, 240px 240px, 32px 32px, 32px 32px, 100% 100%;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.18;
+  background-image:
+    linear-gradient(45deg, rgba(0, 0, 0, 0.12) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(0, 0, 0, 0.12) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.12) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.12) 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
 }
 
 ::selection {
-  background: #0f172a;
-  color: #fff;
-}
-
-html.dark ::selection {
-  background: #e2e8f0;
-  color: #020617;
+  background: #f5c542;
+  color: #111827;
 }
 
 .container-page {
-  width: min(1120px, calc(100% - 2rem));
+  width: min(1160px, calc(100% - 2rem));
   margin-inline: auto;
 }
 
 .section-padding {
   padding-block: 5rem;
+}
+
+.pixel-border {
+  border: 3px solid #241b15;
+  box-shadow:
+    inset 3px 3px 0 rgba(255, 255, 255, 0.28),
+    inset -3px -3px 0 rgba(0, 0, 0, 0.3),
+    6px 6px 0 rgba(24, 17, 12, 0.42);
+}
+
+@media (max-width: 640px) {
+  .section-padding {
+    padding-block: 3.5rem;
+  }
 }

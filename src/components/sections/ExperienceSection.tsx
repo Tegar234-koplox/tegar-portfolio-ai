@@ -1,5 +1,6 @@
 'use client';
 
+import { Compass } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { getLocalizedText } from '@/lib/i18n/localize';
@@ -22,32 +23,33 @@ export function ExperienceSection({ experiences }: { experiences: Experience[] }
   return (
     <section id="experience" className="section-padding">
       <div className="container-page">
-        <div className="mb-8 max-w-2xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
+        <div className="pixel-border mb-8 max-w-2xl bg-[#8fd3f4] p-6 dark:bg-[#28485f]">
+          <Compass className="h-8 w-8 text-[#2f6f28] dark:text-[#9ad483]" />
+          <p className="mt-5 text-sm font-black uppercase tracking-[0.3em] text-[#315f7a] dark:text-[#a9d8ef]">
             {text.experience.eyebrow}
           </p>
-          <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 dark:text-white md:text-4xl">
+          <h2 className="mt-3 text-3xl font-black tracking-tight text-[#17263a] dark:text-[#f6edcf] md:text-5xl">
             {text.experience.title}
           </h2>
         </div>
+
         <div className="space-y-5">
-          {experiences.map((experience) => {
+          {experiences.map((experience, index) => {
             const title = getLocalizedText(experience, 'title', language);
             const type = getLocalizedText(experience, 'type', language);
             const description = getLocalizedText(experience, 'description', language);
 
             return (
-              <Card key={experience.id}>
+              <Card key={experience.id} className="bg-[#b9e5ff]/95 dark:bg-[#223d52]/95">
                 <div className="grid gap-5 md:grid-cols-[0.75fr_1.25fr]">
-                  <div>
-                    <Badge>{type}</Badge>
-                    <h3 className="mt-4 text-xl font-bold text-slate-950 dark:text-white">
-                      {title}
-                    </h3>
-                    <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">
-                      {experience.company}
+                  <div className="border-b-4 border-[#315f7a] pb-5 md:border-b-0 md:border-r-4 md:pb-0 md:pr-5 dark:border-[#4d7892]">
+                    <p className="mb-3 text-xs font-black uppercase tracking-[0.24em] text-[#315f7a] dark:text-[#a9d8ef]">
+                      Quest {String(index + 1).padStart(2, '0')}
                     </p>
-                    <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+                    <Badge>{type}</Badge>
+                    <h3 className="mt-4 text-xl font-black text-[#17263a] dark:text-[#f6edcf]">{title}</h3>
+                    <p className="mt-1 text-sm font-bold text-[#315f7a] dark:text-[#b9d9e9]">{experience.company}</p>
+                    <p className="mt-3 text-sm font-semibold text-[#3f5f72] dark:text-[#b9d9e9]">
                       {formatDateRange(
                         experience.start_date,
                         experience.end_date,
@@ -57,9 +59,7 @@ export function ExperienceSection({ experiences }: { experiences: Experience[] }
                     </p>
                   </div>
                   <div>
-                    <p className="leading-7 text-slate-700 dark:text-slate-300">
-                      {description}
-                    </p>
+                    <p className="font-medium leading-7 text-[#20364a] dark:text-[#e8f2f7]">{description}</p>
                     <div className="mt-4 flex flex-wrap gap-2">
                       {experience.tech_stack.map((tech) => (
                         <Badge key={tech}>{tech}</Badge>

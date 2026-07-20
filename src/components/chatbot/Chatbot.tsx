@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Bot, Send, UserRound } from 'lucide-react';
+import { Bot, Pickaxe, Send, UserRound } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Textarea } from '@/components/ui/Textarea';
@@ -72,7 +72,6 @@ export function Chatbot() {
     }
 
     const chatContainer = chatContainerRef.current;
-
     if (!chatContainer) return;
 
     chatContainer.scrollTo({
@@ -83,7 +82,6 @@ export function Chatbot() {
 
   async function submitMessage(message: string) {
     const trimmedMessage = message.trim();
-
     if (!trimmedMessage || isLoading) return;
 
     const nextMessages: Message[] = [
@@ -142,29 +140,50 @@ export function Chatbot() {
   }
 
   return (
-    <Card className="grid gap-5 lg:grid-cols-[0.8fr_1.2fr]">
-      <div className="space-y-3">
-        <h3 className="text-xl font-bold text-slate-950 dark:text-white">
-          {text.chatbot.quickPromptTitle}
-        </h3>
+    <Card className="grid gap-5 bg-[#b9e5ff]/95 dark:bg-[#223d52]/95 lg:grid-cols-[0.78fr_1.22fr]">
+      <div className="border-2 border-[#241b15] bg-[#8fd3f4] p-4 shadow-[4px_4px_0_rgba(36,27,21,0.38)] dark:bg-[#31546b]">
+        <div className="mb-4 flex items-center gap-3 border-b-4 border-[#315f7a] pb-4 dark:border-[#6b93aa]">
+          <span className="border-2 border-[#241b15] bg-[#f5c542] p-2 text-[#2b211a] shadow-[3px_3px_0_#241b15]">
+            <Pickaxe className="h-5 w-5" />
+          </span>
+          <h3 className="text-lg font-black uppercase tracking-wide text-[#17263a] dark:text-[#f6edcf]">
+            {text.chatbot.quickPromptTitle}
+          </h3>
+        </div>
 
         <div className="space-y-3">
-          {text.chatbot.starterPrompts.map((prompt) => (
+          {text.chatbot.starterPrompts.map((prompt, index) => (
             <button
               key={prompt}
-              className="w-full rounded-2xl border border-slate-200 bg-white/70 p-4 text-left text-sm leading-6 text-slate-700 transition hover:border-slate-950 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300 dark:hover:border-white dark:hover:text-white"
+              className="w-full border-2 border-[#241b15] bg-[#c7ebff] p-4 text-left text-sm font-bold leading-6 text-[#17263a] shadow-[3px_3px_0_rgba(36,27,21,0.35)] transition hover:-translate-y-1 hover:bg-[#dff4ff] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[#3b627a] dark:text-[#f6edcf] dark:hover:bg-[#49778f]"
               onClick={() => submitMessage(prompt)}
               type="button"
               disabled={isLoading}
             >
+              <span className="mr-2 text-[#2f6f28] dark:text-[#9ad483]">0{index + 1}</span>
               {prompt}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-900/70">
-        <div ref={chatContainerRef} className="mb-4 max-h-[420px] space-y-4 overflow-y-auto pr-2">
+      <div className="border-2 border-[#241b15] bg-[#6db7df] p-4 shadow-[4px_4px_0_rgba(36,27,21,0.38)] dark:bg-[#172c3b]">
+        <div className="mb-4 flex items-center gap-3 border-b-4 border-[#315f7a] pb-3 dark:border-[#4d7892]">
+          <span className="border-2 border-[#241b15] bg-[#4f9d3a] p-2 text-white shadow-[3px_3px_0_#241b15]">
+            <Bot className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#244f69] dark:text-[#a9d8ef]">
+              AI consultant terminal
+            </p>
+            <p className="text-sm font-bold text-[#17263a] dark:text-[#f6edcf]">Online · Ready for a new quest</p>
+          </div>
+        </div>
+
+        <div
+          ref={chatContainerRef}
+          className="mb-4 max-h-[420px] space-y-4 overflow-y-auto border-2 border-[#241b15] bg-[#bfe8fb] p-4 pr-2 dark:bg-[#203a4b]"
+        >
           {messages.map((message, index) => {
             const isUser = message.role === 'user';
 
@@ -174,18 +193,18 @@ export function Chatbot() {
                 className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
               >
                 <div
-                  className={`mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white ${
-                    isUser ? 'bg-slate-700' : 'bg-slate-950 dark:bg-slate-200 dark:text-slate-950'
+                  className={`mt-1 flex h-9 w-9 shrink-0 items-center justify-center border-2 border-[#241b15] shadow-[2px_2px_0_#241b15] ${
+                    isUser ? 'bg-[#6f4e37] text-white' : 'bg-[#4f9d3a] text-white'
                   }`}
                 >
                   {isUser ? <UserRound className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
                 </div>
 
                 <div
-                  className={`max-w-[85%] rounded-2xl p-4 text-sm leading-6 shadow-sm ${
+                  className={`max-w-[85%] border-2 border-[#241b15] p-4 text-sm font-medium leading-6 shadow-[3px_3px_0_rgba(36,27,21,0.35)] ${
                     isUser
-                      ? 'rounded-tr-sm bg-slate-950 text-white dark:bg-white dark:text-slate-950'
-                      : 'rounded-tl-sm bg-white text-slate-700 dark:bg-slate-950 dark:text-slate-200'
+                      ? 'bg-[#8fd3f4] text-[#17263a] dark:bg-[#385d73] dark:text-[#f6edcf]'
+                      : 'bg-[#d8f0ff] text-[#17263a] dark:bg-[#2c4859] dark:text-[#f6edcf]'
                   }`}
                 >
                   {message.role === 'assistant' ? (
@@ -194,22 +213,20 @@ export function Chatbot() {
                       components={{
                         p: ({ children }) => <p className="mb-3 leading-6 last:mb-0">{children}</p>,
                         strong: ({ children }) => (
-                          <strong className="font-bold text-slate-950 dark:text-white">
-                            {children}
-                          </strong>
+                          <strong className="font-black text-[#12344a] dark:text-white">{children}</strong>
                         ),
                         h1: ({ children }) => (
-                          <h1 className="mb-3 mt-4 text-xl font-bold leading-7 text-slate-950 first:mt-0 dark:text-white">
+                          <h1 className="mb-3 mt-4 text-xl font-black leading-7 text-[#12344a] first:mt-0 dark:text-white">
                             {children}
                           </h1>
                         ),
                         h2: ({ children }) => (
-                          <h2 className="mb-3 mt-4 text-lg font-bold leading-7 text-slate-950 first:mt-0 dark:text-white">
+                          <h2 className="mb-3 mt-4 text-lg font-black leading-7 text-[#12344a] first:mt-0 dark:text-white">
                             {children}
                           </h2>
                         ),
                         h3: ({ children }) => (
-                          <h3 className="mb-2 mt-4 text-base font-bold leading-6 text-slate-950 first:mt-0 dark:text-white">
+                          <h3 className="mb-2 mt-4 text-base font-black leading-6 text-[#12344a] first:mt-0 dark:text-white">
                             {children}
                           </h3>
                         ),
@@ -217,7 +234,7 @@ export function Chatbot() {
                         ol: ({ children }) => <ol className="mb-3 list-decimal space-y-1 pl-5">{children}</ol>,
                         li: ({ children }) => <li className="leading-6">{children}</li>,
                         code: ({ children }) => (
-                          <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-semibold text-slate-900 dark:bg-slate-800 dark:text-slate-100">
+                          <code className="border border-[#315f7a] bg-[#8fd3f4] px-1.5 py-0.5 text-xs font-bold text-[#17263a] dark:bg-[#1c3444] dark:text-[#d9effb]">
                             {children}
                           </code>
                         ),
