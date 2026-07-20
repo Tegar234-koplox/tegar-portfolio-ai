@@ -1,9 +1,10 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Bot, Pickaxe, Send, UserRound } from 'lucide-react';
+import { Pickaxe, Send } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Textarea } from '@/components/ui/Textarea';
@@ -169,8 +170,15 @@ export function Chatbot() {
 
       <div className="border-2 border-[#241b15] bg-[#6db7df] p-4 shadow-[4px_4px_0_rgba(36,27,21,0.38)] dark:bg-[#172c3b]">
         <div className="mb-4 flex items-center gap-3 border-b-4 border-[#315f7a] pb-3 dark:border-[#4d7892]">
-          <span className="border-2 border-[#241b15] bg-[#4f9d3a] p-2 text-white shadow-[3px_3px_0_#241b15]">
-            <Bot className="h-5 w-5" />
+          <span className="flex h-11 w-11 items-center justify-center overflow-hidden border-2 border-[#241b15] bg-[#d8f0ff] shadow-[3px_3px_0_#241b15] dark:bg-[#2c4859]">
+            <Image
+              src="/chatbox/icons8-bot.gif"
+              alt="AI Tegar bot"
+              width={40}
+              height={40}
+              unoptimized
+              className="h-10 w-10 object-cover"
+            />
           </span>
           <div>
             <p className="text-xs font-black uppercase tracking-[0.22em] text-[#244f69] dark:text-[#a9d8ef]">
@@ -186,6 +194,10 @@ export function Chatbot() {
         >
           {messages.map((message, index) => {
             const isUser = message.role === 'user';
+            const avatarSrc = isUser
+              ? '/chatbox/icons8-profile.gif'
+              : '/chatbox/icons8-bot.gif';
+            const avatarAlt = isUser ? 'User profile' : 'AI Tegar bot';
 
             return (
               <div
@@ -193,11 +205,18 @@ export function Chatbot() {
                 className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
               >
                 <div
-                  className={`mt-1 flex h-9 w-9 shrink-0 items-center justify-center border-2 border-[#241b15] shadow-[2px_2px_0_#241b15] ${
-                    isUser ? 'bg-[#6f4e37] text-white' : 'bg-[#4f9d3a] text-white'
+                  className={`mt-1 flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden border-2 border-[#241b15] shadow-[2px_2px_0_#241b15] ${
+                    isUser ? 'bg-[#8fd3f4] dark:bg-[#385d73]' : 'bg-[#d8f0ff] dark:bg-[#2c4859]'
                   }`}
                 >
-                  {isUser ? <UserRound className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+                  <Image
+                    src={avatarSrc}
+                    alt={avatarAlt}
+                    width={40}
+                    height={40}
+                    unoptimized
+                    className="h-10 w-10 object-cover"
+                  />
                 </div>
 
                 <div
