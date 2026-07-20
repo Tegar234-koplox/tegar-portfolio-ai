@@ -121,38 +121,36 @@ export const featuredProjects: FeaturedProject[] = [
     status: 'Development',
     role: 'Full Stack Developer',
     shortDescription:
-      'Wedding Web / Niskala Digital Wedding Invitation adalah platform undangan pernikahan digital bilingual untuk pasangan dan vendor wedding yang membutuhkan alur produksi undangan yang rapi, personal, dan siap operasional. Project ini bukan hanya landing page, tetapi sistem full-stack yang mengelola katalog tema dan paket, render undangan berbasis data, RSVP tamu, prakiraan cuaca BMKG, dashboard client, dashboard staff, order pipeline, audit trail, media, dan pembayaran yang siap diintegrasikan dengan Midtrans.',
+      'Wedding Web / Niskala Digital Wedding Invitation adalah platform undangan pernikahan digital bilingual untuk pasangan dan vendor wedding yang membutuhkan alur produksi undangan yang rapi, personal, dan siap operasional. Project ini bukan hanya landing page, tetapi sistem full-stack yang mengelola katalog tema dan paket, render undangan berbasis data, RSVP tamu, prakiraan cuaca Open-Meteo, dashboard client, dashboard staff, order pipeline, audit trail, media, dan pembayaran yang siap diintegrasikan dengan Midtrans.',
     shortDescription_en:
-      'Wedding Web / Niskala Digital Wedding Invitation is a bilingual digital wedding invitation platform for couples and wedding vendors who need a neat, personalized, and operational invitation production process. This project is not just a landing page, but a full-stack system that manages theme and package catalogs, data-driven invitation rendering, guest RSVPs, BMKG weather forecasts, client dashboards, staff dashboards, order pipelines, audit trails, media, and payments that are ready to be integrated with Midtrans.',
+      'Wedding Web / Niskala Digital Wedding Invitation is a bilingual digital wedding invitation platform for couples and wedding vendors who need a neat, personalized, and operational invitation production process. This project is not just a landing page, but a full-stack system that manages theme and package catalogs, data-driven invitation rendering, guest RSVPs, Open-Meteo weather forecasts, client dashboards, staff dashboards, order pipelines, audit trails, media, and payments that are ready to be integrated with Midtrans.',
     problem:
       'Undangan digital berhenti di sisi visual: tema cantik, halaman publik, dan form sederhana. Masalah operasional acak: revisi via chat, status order tidak terpusat, data tamu sulit dilacak, konten undangan tidak tervalidasi, media bercampur dengan data bisnis, serta kebutuhan client dan staff berada di tempat berbeda.',
     problem_en:
       'Digital invitations stop at the visual side: beautiful themes, public pages, and simple forms. Operational issues arise: chat revisions, non-centralized order status, difficult to track guest data, unvalidated invitation content, mixed media with business data, and client and staff needs being in different locations.',
     solution:
-      'Project ini menyelesaikan masalah tersebut dengan platform terstruktur: frontend Next.js untuk pengalaman publik dan dashboard, backend Django REST API untuk data bisnis dan permissions, PostgreSQL sebagai source of truth, Redis/Celery untuk cache dan pekerjaan async, Cloudinary untuk media, BMKG untuk prakiraan cuaca, serta model role-based untuk staff dan client. Arsitekturnya jelas memisahkan public API, staff API, client API, dan payment API sehingga produk bisa berkembang dari katalog undangan menjadi workflow produksi invitation yang lebih profesional.',
+      'Project ini menyelesaikan masalah tersebut dengan platform terstruktur: frontend Next.js untuk pengalaman publik dan dashboard, backend Django REST API untuk data bisnis dan permissions, PostgreSQL sebagai source of truth, Redis/Celery untuk cache dan pekerjaan async, Cloudinary untuk media, Open-Meteo untuk prakiraan cuaca, serta model role-based untuk staff dan client. Arsitekturnya jelas memisahkan public API, staff API, client API, dan payment API sehingga produk bisa berkembang dari katalog undangan menjadi workflow produksi invitation yang lebih profesional.',
     solution_en:
-      'This project solves these problems with a structured platform: a Next.js frontend for the public experience and dashboard, a Django REST API backend for business data and permissions, PostgreSQL as the source of truth, Redis/Celery for caching and async jobs, Cloudinary for media, BMKG for weather forecasts, and a role-based model for staff and clients. The architecture clearly separates the public API, staff API, client API, and payment API so the product can evolve from an invitation catalog to a more professional invitation production workflow.',
-    techStack: ['Next.js 16', 'React 19', 'TypeScript', 'Tailwind CSS', 'Framer Motion', 'GSAP', 'Zod', 'Sentry', 'Django 5.2', 'Django REST Framework', 'drf-spectacular/OpenAPI', 'PostgreSQL', 'Redis', 'Celery', 'Cloudinary', 'Midtrans', 'BMKG API'],
+      'This project solves these problems with a structured platform: a Next.js frontend for the public experience and dashboard, a Django REST API backend for business data and permissions, PostgreSQL as the source of truth, Redis/Celery for caching and async jobs, Cloudinary for media, Open-Meteo for weather forecasts, and a role-based model for staff and clients. The architecture clearly separates the public API, staff API, client API, and payment API so the product can evolve from an invitation catalog to a more professional invitation production workflow.',
+    techStack: ['Next.js 16', 'React 19', 'TypeScript', 'Tailwind CSS', 'Framer Motion', 'GSAP', 'Zod', 'Sentry', 'Django 5.2', 'Django REST Framework', 'drf-spectacular/OpenAPI', 'PostgreSQL', 'Redis', 'Celery', 'Cloudinary', 'Open-Meteo API', 'Cloidflare', 'Whatsapp Cloud API', 'Docker'],
     features: [
       'Website publik bilingual Indonesia/English dengan halaman home, tema, paket, preview tema, dan CTA WhatsApp',
       'Renderer undangan berbasis registry dan versioning, sehingga tema bisa dikembangkan tanpa merusak undangan lama',
       'Halaman undangan publik via publicSlug, berisi nama pasangan, informasi acara, lokasi, cerita,  backsound, dan cuaca',
-      'Integrasi prakiraan cuaca BMKG berbasis lokasi administrasi tingkat IV; BMKG menyediakan data prakiraan 3 hari, format JSON, dan wajib dicantumkan sebagai sumber data (Sumber: data.bmkg.go.id)',
+      'Integrasi prakiraan cuaca Open-Meteo berbasis longitude dan latitude; Open-Meteo menyediakan data prakiraan 16 hari',
       'RSVP publik untuk tamu',
       'Dashboard client untuk review draft, update konten, submit revisi, approve publish, dan export tamu',
       'Dashboard staff untuk order queue, leads, metrics, assignment staff, audit trail, katalog tema/paket, media, dan publishing workflow',
-      'Payment model Midtrans-ready dengan invoice, status pembayaran, idempotency key, webhook event, dan audit state. Midtrans menyediakan payment API, checkout, payment link, dan invoicing untuk web/app (Sumber: docs.midtrans.com)',
       'Security defaults: permission default authenticated, serializer publik dipisah, CSRF/session auth, throttling, CSP, secrets via environment, Cloudinary signing server-side, dan audit event untuk mutasi sensitif',
     ],
     features_en: [
       'A bilingual Indonesian/English public website with a homepage, themes, packages, theme previews, and WhatsApp CTAs',
       'Registry-based and versioned invitation renderer, allowing themes to be developed without breaking existing invitations',
       'Public invitation page via publicSlug, containing the couples name, event information, location, story, background music, and weather',
-      'Integration of BMKG weather forecasts based on location-based level IV administration; BMKG provides 3-day forecast data in JSON format, and must be listed as a data source (Source: data.bmkg.go.id)',
+      'Integration of Open-Meteo weather forecasts based on longitude and latitude; Open-Meteo provides 16-day',
       'Public RSVP for guests',
       'Client dashboard for reviewing drafts, updating content, submitting revisions, approving publishing, and exporting guest posts',
       'Staff dashboard for order queue, leads, metrics, staff assignments, audit trail, theme/package catalogue, media, and publishing workflow',
-      'Midtrans payment model is ready with invoices, payment status, idempotency keys, webhook events, and audit state. Midtrans provides payment APIs, checkout, payment links, and invoicing for web/apps (Source: docs.midtrans.com)',
       'Security defaults: permission default authenticated, public serializer separated, CSRF/session auth, throttling, CSP, secrets via environment, Cloudinary server-side signing, and event auditing for sensitive transactions',
     ],
     coverImage: '/projects/wedding-web/cover.png',
