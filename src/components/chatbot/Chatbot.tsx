@@ -170,16 +170,6 @@ export function Chatbot() {
 
       <div className="border-2 border-[#241b15] bg-[#6db7df] p-4 shadow-[4px_4px_0_rgba(36,27,21,0.38)] dark:bg-[#172c3b]">
         <div className="mb-4 flex items-center gap-3 border-b-4 border-[#315f7a] pb-3 dark:border-[#4d7892]">
-          <span className="flex h-11 w-11 items-center justify-center overflow-hidden border-2 border-[#241b15] bg-[#d8f0ff] shadow-[3px_3px_0_#241b15] dark:bg-[#2c4859]">
-            <Image
-              src="/chatbox/icons8-bot.gif"
-              alt="AI Tegar bot"
-              width={40}
-              height={40}
-              unoptimized
-              className="h-10 w-10 object-cover"
-            />
-          </span>
           <div>
             <p className="text-xs font-black uppercase tracking-[0.22em] text-[#244f69] dark:text-[#a9d8ef]">
               AI consultant terminal
@@ -195,8 +185,8 @@ export function Chatbot() {
           {messages.map((message, index) => {
             const isUser = message.role === 'user';
             const avatarSrc = isUser
-              ? '/chatbox/icons8-profile.gif'
-              : '/chatbox/icons8-bot.gif';
+              ? '/chatbox/avatar.png'
+              : '/chatbox/creature.gif';
             const avatarAlt = isUser ? 'User profile' : 'AI Tegar bot';
 
             return (
