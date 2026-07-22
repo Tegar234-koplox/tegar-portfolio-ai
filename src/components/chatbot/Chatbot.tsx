@@ -168,7 +168,7 @@ export function Chatbot() {
         </div>
       </div>
 
-      <div className="border-2 border-[#241b15] bg-[#6db7df] p-4 shadow-[4px_4px_0_rgba(36,27,21,0.38)] dark:bg-[#172c3b]">
+      <div className="min-w-0 border-2 border-[#241b15] bg-[#6db7df] p-2.5 shadow-[4px_4px_0_rgba(36,27,21,0.38)] dark:bg-[#172c3b] sm:p-4">
         <div className="mb-4 flex items-center gap-3 border-b-4 border-[#315f7a] pb-3 dark:border-[#4d7892]">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.22em] text-[#244f69] dark:text-[#a9d8ef]">
@@ -180,7 +180,7 @@ export function Chatbot() {
 
         <div
           ref={chatContainerRef}
-          className="mb-4 max-h-[420px] space-y-4 overflow-y-auto border-2 border-[#241b15] bg-[#bfe8fb] p-4 pr-2 dark:bg-[#203a4b]"
+          className="mb-4 max-h-[420px] min-w-0 space-y-4 overflow-x-hidden overflow-y-auto border-2 border-[#241b15] bg-[#bfe8fb] p-2 dark:bg-[#203a4b] sm:p-4 sm:pr-2"
         >
           {messages.map((message, index) => {
             const isUser = message.role === 'user';
@@ -192,11 +192,16 @@ export function Chatbot() {
             return (
               <div
                 key={`${message.role}-${index}`}
-                className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
+                className={`flex w-full min-w-0 items-start gap-2 sm:gap-3 ${
+                  isUser ? 'flex-row-reverse' : 'flex-row'
+                }`}
+    
               >
                 <div
-                  className={`mt-1 flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden border-2 border-[#241b15] shadow-[2px_2px_0_#241b15] ${
-                    isUser ? 'bg-[#8fd3f4] dark:bg-[#385d73]' : 'bg-[#d8f0ff] dark:bg-[#2c4859]'
+                  className={`mt-1 flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden border-2 border-[#241b15] shadow-[2px_2px_0_#241b15] sm:h-11 sm:w-11 ${
+                    isUser
+                    ? 'bg-[#8fd3f4] dark:bg-[#385d73]'
+                    : 'bg-[#d8f0ff] dark:bg-[#2c4859]'
                   }`}
                 >
                   <Image
@@ -205,12 +210,12 @@ export function Chatbot() {
                     width={40}
                     height={40}
                     unoptimized
-                    className="h-10 w-10 object-cover"
+                    className="h-8 w-8 object-cover sm:h-10 sm:w-10"
                   />
                 </div>
 
                 <div
-                  className={`max-w-[85%] border-2 border-[#241b15] p-4 text-sm font-medium leading-6 shadow-[3px_3px_0_rgba(36,27,21,0.35)] ${
+                  className={`min-w-0 flex-1 break-words border-2 border-[#241b15] p-3 text-sm font-medium leading-6 shadow-[3px_3px_0_rgba(36,27,21,0.35)] sm:flex-none sm:max-w-[85%] sm:p-4 ${
                     isUser
                       ? 'bg-[#8fd3f4] text-[#17263a] dark:bg-[#385d73] dark:text-[#f6edcf]'
                       : 'bg-[#d8f0ff] text-[#17263a] dark:bg-[#2c4859] dark:text-[#f6edcf]'
@@ -218,47 +223,65 @@ export function Chatbot() {
                 >
                   {message.role === 'assistant' ? (
                     <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
+                     remarkPlugins={[remarkGfm]}
                       components={{
-                        p: ({ children }) => <p className="mb-3 leading-6 last:mb-0">{children}</p>,
-                        strong: ({ children }) => (
-                          <strong className="font-black text-[#12344a] dark:text-white">{children}</strong>
-                        ),
-                        h1: ({ children }) => (
-                          <h1 className="mb-3 mt-4 text-xl font-black leading-7 text-[#12344a] first:mt-0 dark:text-white">
-                            {children}
-                          </h1>
-                        ),
-                        h2: ({ children }) => (
-                          <h2 className="mb-3 mt-4 text-lg font-black leading-7 text-[#12344a] first:mt-0 dark:text-white">
-                            {children}
-                          </h2>
-                        ),
-                        h3: ({ children }) => (
-                          <h3 className="mb-2 mt-4 text-base font-black leading-6 text-[#12344a] first:mt-0 dark:text-white">
-                            {children}
-                          </h3>
-                        ),
-                        ul: ({ children }) => <ul className="mb-3 list-disc space-y-1 pl-5">{children}</ul>,
-                        ol: ({ children }) => <ol className="mb-3 list-decimal space-y-1 pl-5">{children}</ol>,
-                        li: ({ children }) => <li className="leading-6">{children}</li>,
-                        code: ({ children }) => (
-                          <code className="border border-[#315f7a] bg-[#8fd3f4] px-1.5 py-0.5 text-xs font-bold text-[#17263a] dark:bg-[#1c3444] dark:text-[#d9effb]">
-                            {children}
-                          </code>
-                        ),
-                      }}
-                    >
-                      {message.content}
-                    </ReactMarkdown>
-                  ) : (
-                    <p className="whitespace-pre-line">{message.content}</p>
-                  )}
+                       p: ({ children }) => (
+                      <p className="mb-3 break-words leading-6 last:mb-0">
+                      {children}
+                      </p>
+                      ),
+                     strong: ({ children }) => (
+                    <strong className="font-black text-[#12344a] dark:text-white">
+                      {children}
+                    </strong>
+                    ),
+                          h1: ({ children }) => (
+                            <h1 className="mb-3 mt-4 text-xl font-black leading-7 text-[#12344a] first:mt-0 dark:text-white">
+                              {children}
+                            </h1>
+                          ),
+                          h2: ({ children }) => (
+                            <h2 className="mb-3 mt-4 text-lg font-black leading-7 text-[#12344a] first:mt-0 dark:text-white">
+                              {children}
+                            </h2>
+                          ),
+                          h3: ({ children }) => (
+                            <h3 className="mb-2 mt-4 text-base font-black leading-6 text-[#12344a] first:mt-0 dark:text-white">
+                              {children}
+                            </h3>
+                          ),
+                          ul: ({ children }) => (
+                            <ul className="mb-3 list-disc space-y-1 pl-5">
+                              {children}
+                            </ul>
+                          ),
+                          ol: ({ children }) => (
+                            <ol className="mb-3 list-decimal space-y-1 pl-5">
+                              {children}
+                            </ol>
+                          ),
+                          li: ({ children }) => (
+                            <li className="break-words leading-6">{children}</li>
+                          ),
+                          code: ({ children }) => (
+                            <code className="break-all border border-[#315f7a] bg-[#8fd3f4] px-1.5 py-0.5 text-xs font-bold text-[#17263a] dark:bg-[#1c3444] dark:text-[#d9effb]">
+                              {children}
+                            </code>
+                          ),
+                        }}
+                      >
+                     {message.content}
+                      </ReactMarkdown>
+                    ) : (
+                      <p className="whitespace-pre-line break-words">
+                        {message.content}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+        </div>  
 
         <form
           className="space-y-3"
