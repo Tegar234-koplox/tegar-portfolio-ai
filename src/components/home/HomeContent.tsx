@@ -1,6 +1,6 @@
 'use client';
 
-import { Bot, Mail } from 'lucide-react';
+import { Bot, ChevronRight, Mail } from 'lucide-react';
 import { Chatbot } from '@/components/chatbot/Chatbot';
 import { ContactForm } from '@/components/contact/ContactForm';
 import { Footer } from '@/components/layout/Footer';
@@ -12,7 +12,7 @@ import { HeroSection } from '@/components/sections/HeroSection';
 import { SkillsSection } from '@/components/sections/SkillsSection';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import type { PortfolioData } from '@/types/portfolio';
-
+import Link from 'next/link';
 export function HomeContent({ data }: { data: PortfolioData }) {
   const { text } = useLanguage();
 
@@ -39,7 +39,38 @@ export function HomeContent({ data }: { data: PortfolioData }) {
               {text.chatbotSection.description}
             </p>
           </div>
-          <Chatbot />
+          <>
+            {/* Desktop */}
+  <div className="hidden lg:block">
+    <Chatbot />
+  </div>
+
+  {/* Mobile */}
+  <div className="lg:hidden">
+    <Link
+      href="/ai-chat"
+      className="flex w-full items-center justify-between border-4 border-[#241b15] bg-[#6db7df] p-4 text-[#17263a] shadow-[6px_6px_0_#241b15] transition active:translate-x-1 active:translate-y-1 active:shadow-none dark:bg-[#223d52] dark:text-[#f6edcf]"
+    >
+      <div className="flex items-center gap-3">
+        <span className="flex h-12 w-12 items-center justify-center border-2 border-[#241b15] bg-[#f5c542] text-[#2b211a] shadow-[3px_3px_0_#241b15]">
+          <Bot className="h-6 w-6" />
+        </span>
+
+        <div className="text-left">
+          <p className="text-base font-black uppercase tracking-wide">
+            TRY AI CHATBOT
+          </p>
+
+          <p className="mt-1 text-xs font-bold opacity-75">
+            Ask about services, projects, and pricing
+          </p>
+        </div>
+      </div>
+
+      <ChevronRight className="h-6 w-6 shrink-0" />
+    </Link>
+  </div>
+</>
         </div>
       </section>
 
